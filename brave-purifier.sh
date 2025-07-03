@@ -67,16 +67,29 @@ detect_package_manager() {
     fi
 }
 
+# Helper: Check if Brave repo is present and usable
+brave_repo_ok() {
+    # Check if Brave repo is in sources and apt-cache policy shows brave-browser candidate
+    grep -q 'brave-browser-apt-release.s3.brave.com' /etc/apt/sources.list.d/brave-browser-release.list 2>/dev/null || return 1
+    apt-cache policy brave-browser | grep -q 'Candidate:' && \
+    apt-cache policy brave-browser | grep -q 'brave-browser-apt-release.s3.brave.com' && return 0
+    return 1
+}
+
 # Install minimal dependencies
 install_dependencies() {
     log "Installing minimal dependencies..."
     
     case $PM in
         "apt")
-            if ! apt update -qq; then
-                error "apt update failed. This may be due to a broken or third-party repository (e.g., Cloudflare WARP). Please check /etc/apt/sources.list.d/ and remove or fix any problematic sources."
-                warn "For the error: 'does not have a Release file', see the Troubleshooting section in the README."
-                exit 1
+            if ! apt update -qq 2>apt_update.log; then
+                if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log; then
+                    error "apt update failed for Brave repo. Please check your network or the Brave repository."
+                    rm -f apt_update.log
+                    exit 1
+                fi
+                warn "apt update encountered errors, but not for Brave repo. Attempting to continue..."
+                rm -f apt_update.log
             fi
             apt install -y curl gnupg >/dev/null 2>&1
             ;;
@@ -108,13 +121,22 @@ install_brave() {
             echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" | \
                 tee /etc/apt/sources.list.d/brave-browser-release.list >/dev/null
             
-            if ! apt update -qq; then
-                error "apt update failed after adding Brave repo. This may be due to a broken or third-party repository (e.g., Cloudflare WARP). Please check /etc/apt/sources.list.d/ and remove or fix any problematic sources."
-                warn "For the error: 'does not have a Release file', see the Troubleshooting section in the README."
-                exit 1
+            if ! apt update -qq 2>apt_update.log; then
+                if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log; then
+                    error "apt update failed for Brave repo. Please check your network or the Brave repository."
+                    rm -f apt_update.log
+                    exit 1
+                fi
+                warn "apt update encountered errors, but not for Brave repo. Attempting to continue..."
+                rm -f apt_update.log
             fi
-            if ! apt install -y brave-browser; then
-                error "Failed to install Brave Browser. This may be due to broken sources or network issues."
+            if brave_repo_ok; then
+                if ! apt install -y brave-browser; then
+                    error "Failed to install Brave Browser. This may be due to broken sources or network issues."
+                    exit 1
+                fi
+            else
+                error "Brave repository is not available or does not provide a candidate. Please check your sources."
                 exit 1
             fi
             ;;
