@@ -432,3 +432,24 @@ brave-browser chrome://settings/
 ```
 
 For more troubleshooting help, see [Troubleshooting](Troubleshooting) page.
+
+## Debloat Configuration
+
+Brave Purifier now uses grouped debloat options for easier configuration:
+
+- **Brave Features**: Rewards, Wallet, VPN, News, Talk, Sync
+- **Privacy & Tracking**: Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat
+- **Autofill & Passwords**: Autofill, Credit Card, Password Manager
+- **Permissions**: Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.
+- **UI & Suggestions**: Search Suggestions, Spellcheck, Bookmarks Bar, Home Button, Web Store, Background Mode, etc.
+
+When running the script, you will be prompted for each group. Answer 'y' to apply all debloat settings in that group, or 'n' to skip.
+
+**Example:**
+```
+Apply debloat for Brave Features (Rewards, Wallet, VPN, News, Talk, Sync)? [Y/n]: y
+Apply debloat for Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)? [Y/n]: y
+Apply debloat for Autofill & Passwords (Autofill, Credit Card, Password Manager)? [Y/n]: n
+Apply debloat for Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)? [Y/n]: y
+Apply debloat for UI & Suggestions (Search Suggestions, Spellcheck, Bookmarks Bar, Home Button, Web Store, Background Mode, etc.)? [Y/n]: n
+```

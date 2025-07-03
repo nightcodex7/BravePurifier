@@ -62,6 +62,29 @@ This wiki is organized into several sections:
 - **Issues**: [GitHub Issues](https://github.com/nightcodex7/BravePurifier/issues)
 - **Releases**: [GitHub Releases](https://github.com/nightcodex7/BravePurifier/releases)
 
+## Debloating Features
+
+Brave Purifier now lets you choose privacy/debloat options in simple groups:
+
+- **Brave Features**: Rewards, Wallet, VPN, News, Talk, Sync
+- **Privacy & Tracking**: Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat
+- **Autofill & Passwords**: Autofill, Credit Card, Password Manager
+- **Permissions**: Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.
+- **UI & Suggestions**: Search Suggestions, Spellcheck, Bookmarks Bar, Home Button, Web Store, Background Mode, etc.
+
+**Example prompt:**
+```
+Do you want to skip selection and apply ALL debloat options? [Y/n]: n
+You will be prompted for each debloat group. Enter 'y' to apply, 'n' to skip.
+Apply debloat for Brave Features (Rewards, Wallet, VPN, News, Talk, Sync)? [Y/n]: y
+Apply debloat for Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)? [Y/n]: y
+Apply debloat for Autofill & Passwords (Autofill, Credit Card, Password Manager)? [Y/n]: n
+Apply debloat for Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)? [Y/n]: y
+Apply debloat for UI & Suggestions (Search Suggestions, Spellcheck, Bookmarks Bar, Home Button, Web Store, Background Mode, etc.)? [Y/n]: n
+```
+
+All relevant settings for each group will be applied automatically.
+
 ---
 
 *Created by [nightcodex7](https://github.com/nightcodex7)*

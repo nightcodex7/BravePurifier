@@ -332,6 +332,21 @@ See [Contributing](Contributing) for detailed guidelines.
 
 All privacy enhancement suggestions are carefully evaluated.
 
+## FAQ: Debloat Options
+
+**Q: How do I choose which features to debloat?**
+A: When you run Brave Purifier, you will be prompted for 5 easy-to-understand groups:
+- Brave Features
+- Privacy & Tracking
+- Autofill & Passwords
+- Permissions
+- UI & Suggestions
+
+Each group covers a set of related features. Answer 'y' to debloat all features in that group, or 'n' to skip.
+
+**Q: What does each group include?**
+A: See the Home or Configuration page for a full list of what each group covers.
+
 ---
 
 *Don't see your question here? Check the [Troubleshooting](Troubleshooting) page or create an issue on GitHub.*
