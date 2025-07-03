@@ -2,20 +2,20 @@
 
 **Ultra-lightweight privacy-focused Brave Browser installer and debloater**
 
-[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/nightcodex7/brave-purifier)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/nightcodex7/brave-purifier/blob/main/LICENSE)
-[![Shell Script](https://img.shields.io/badge/shell-bash-orange.svg)](https://github.com/nightcodex7/brave-purifier)
+[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/nightcodex7/BravePurifier)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/nightcodex7/BravePurifier/blob/main/LICENSE)
+[![Shell Script](https://img.shields.io/badge/shell-bash-orange.svg)](https://github.com/nightcodex7/BravePurifier)
 
 ## 🚀 Quick Start
 
 **One-line installation:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh | sudo bash
 ```
 
 **Or download and run:**
 ```bash
-wget https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh
+wget https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh
 chmod +x brave-purifier.sh
 sudo ./brave-purifier.sh
 ```
@@ -58,20 +58,20 @@ sudo ./brave-purifier.sh
 
 ### Method 1: One-Line Install (Recommended)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh | sudo bash
 ```
 
 ### Method 2: Download and Run
 ```bash
-wget https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh
+wget https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh
 chmod +x brave-purifier.sh
 sudo ./brave-purifier.sh
 ```
 
 ### Method 3: Clone Repository
 ```bash
-git clone https://github.com/nightcodex7/brave-purifier.git
-cd brave-purifier
+git clone https://github.com/nightcodex7/BravePurifier.git
+cd BravePurifier
 sudo ./brave-purifier.sh
 ```
 
@@ -114,7 +114,7 @@ sudo ./brave-purifier.sh
 ## 🗂️ Project Structure
 
 ```
-brave-purifier/
+BravePurifier/
 ├── brave-purifier.sh           # Main installation script
 ├── README.md                   # This documentation
 └── images/                     # Screenshots and banner images
@@ -193,8 +193,8 @@ MIT License - see the script header for details.
 
 ## 🔗 Links
 
-- **Repository**: [https://github.com/nightcodex7/brave-purifier](https://github.com/nightcodex7/brave-purifier)
-- **Issues**: [GitHub Issues](https://github.com/nightcodex7/brave-purifier/issues)
+- **Repository**: [https://github.com/nightcodex7/BravePurifier](https://github.com/nightcodex7/BravePurifier)
+- **Issues**: [GitHub Issues](https://github.com/nightcodex7/BravePurifier/issues)
 - **Brave Browser**: [https://brave.com](https://brave.com)
 - **DuckDuckGo**: [https://duckduckgo.com](https://duckduckgo.com)
 
