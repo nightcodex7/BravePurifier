@@ -137,10 +137,14 @@ All relevant settings for each group or option will be applied automatically.
 
 ## 📥 Installation Methods
 
-### Method 1: One-Line Install (Recommended)
-```bash
-curl -fsSL https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh | sudo bash
+### Recommended Method
+```sh
+curl -fsSL https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh -o brave-purifier.sh
+chmod +x brave-purifier.sh
+sudo ./brave-purifier.sh
 ```
+
+> **Note:** The one-liner `curl ... | sudo bash` is not supported because interactive prompts require a TTY. Always download and run the script directly for full interactive support.
 
 ### Method 2: Download and Run
 ```bash
