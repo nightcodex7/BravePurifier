@@ -16,6 +16,12 @@ if [[ $EUID -ne 0 ]]; then
   fi
 fi
 
+# --- INTERACTIVITY CHECK ---
+if ! [ -t 0 ]; then
+  echo "[ERROR] This script must be run in an interactive shell for user prompts."
+  exit 1
+fi
+
 # Brave Browser Purifier Script
 # Ultra-lightweight privacy-focused installer and debloater
 # Version: 1.1
@@ -761,9 +767,9 @@ main() {
     log "Brave Browser not detected. Installing..."
     install_brave
   fi
+  prompt_default_browser
   prompt_debloat_groups
   prompt_search_engine
-  prompt_default_browser
   write_system_policy
   while IFS=: read -r username user_home; do
     [[ -d "$user_home" ]] || continue
