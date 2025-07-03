@@ -16,11 +16,9 @@ if [[ $EUID -ne 0 ]]; then
   fi
 fi
 
-# --- INTERACTIVITY CHECK ---
-if ! [ -t 0 ]; then
-  echo "[ERROR] This script must be run in an interactive shell for user prompts."
-  exit 1
-fi
+# --- INTERACTIVITY HANDLING ---
+# This script is fully interactive and works with 'curl ... | sudo bash' as long as a TTY is available.
+# All prompts use /dev/tty if available, so user input is always required.
 
 # Brave Browser Purifier Script
 # Ultra-lightweight privacy-focused installer and debloater
@@ -100,11 +98,11 @@ safe_read() {
   local prompt="$2"
   local default="$3"
   local input
-  if [ -t 0 ]; then
-    read -p "$prompt" input || input=""
+  if [ -e /dev/tty ]; then
+    read -p "$prompt" input < /dev/tty || input=""
   else
-    warn "No interactive terminal detected. Using default: $default for prompt: $prompt"
-    input=""
+    echo "[ERROR] No interactive terminal detected. Cannot prompt for user input. Exiting."
+    exit 1
   fi
   if [ -z "$input" ]; then
     input="$default"
@@ -321,7 +319,7 @@ set_debloat_group() {
       done
       ;;
     UISuggestions)
-      for opt in Spellcheck HomeButton ImportSearchEngine; do
+      for opt in Spellcheck HomeButton; do
         DEBLOAT[$opt]=$value
       done
       ;;
@@ -366,7 +364,7 @@ prompt_debloat_groups() {
         ;;
       UISuggestions)
         label="Other UI & Suggestions"
-        desc="Disables UI suggestions and import search engine feature."
+        desc="Disables UI suggestions."
         ;;
     esac
     echo
@@ -767,6 +765,7 @@ main() {
     log "Brave Browser not detected. Installing..."
     install_brave
   fi
+  reset_brave_defaults
   prompt_default_browser
   prompt_debloat_groups
   prompt_search_engine
