@@ -21,6 +21,8 @@
 - **Default browser option** (set Brave as default)
 - **Suppresses onboarding, welcome, and telemetry prompts**
 - **Reliably sets default search engine, homepage, and new tab**
+- **Fully interactive**: The script works with 'curl ... | sudo bash' as long as a TTY is available. All prompts use /dev/tty for user input.
+- **ImportSearchEngine debloat option removed**
 
 ## 🚀 Quick Start
 
@@ -59,7 +61,7 @@ Brave Purifier now lets you choose privacy/debloat options in simple groups:
 - **Privacy & Tracking**: Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat
 - **Autofill & Passwords**: Autofill, Password Manager
 - **Permissions**: Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.
-- **Other UI & Suggestions**: Spellcheck, Home Button, Import Passwords, Import Search Engine
+- **Other UI & Suggestions**: Spellcheck, Home Button
 
 **Prompted separately:**
 - **Home Screen Debloat**
@@ -96,7 +98,7 @@ Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUS
   Blocks access to sensitive device features and permissions.
 Debloat this group? [Y/n]: y
 
-Other UI & Suggestions (Spellcheck, Home Button, Import Passwords, Import Search Engine)
+Other UI & Suggestions (Spellcheck, Home Button)
   Disables UI suggestions and import features.
 Debloat this group? [Y/n]: n
 
