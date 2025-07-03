@@ -158,30 +158,57 @@ install_brave() {
         "dnf"|"yum")
             rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
             $PM config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
-            $PM install -y brave-browser
+            if ! $PM list brave-browser 2>/dev/null | grep -q brave-browser; then
+                error "Brave Browser package not found in $PM repositories. Please check your repo configuration."
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                exit 1
+            fi
+            if ! $PM install -y brave-browser; then
+                error "Failed to install Brave Browser."
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                exit 1
+            fi
             ;;
         "pacman")
-            # Use AUR if available, fallback to manual
             if command -v yay >/dev/null 2>&1; then
-                sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" yay -S --noconfirm brave-bin
-            elif command -v paru >/dev/null 2>&1; then
-                sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" paru -S --noconfirm brave-bin
-            else
-                warn "AUR helper not found. Installing from official repositories..."
-                pacman -S --noconfirm brave-browser 2>/dev/null || {
-                    error "Brave not available in official repos. Please install an AUR helper (yay/paru) first."
+                if ! sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" yay -S --noconfirm brave-bin; then
+                    error "Failed to install Brave Browser via yay."
+                    warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
                     exit 1
-                }
+                fi
+            elif command -v paru >/dev/null 2>&1; then
+                if ! sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" paru -S --noconfirm brave-bin; then
+                    error "Failed to install Brave Browser via paru."
+                    warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                    exit 1
+                fi
+            else
+                warn "AUR helper not found. Please install yay or paru to install Brave Browser from the AUR."
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                exit 1
             fi
             ;;
         "zypper")
             zypper addrepo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo brave-browser
             zypper --gpg-auto-import-keys refresh brave-browser
-            zypper install -y brave-browser
+            if ! zypper se -s brave-browser | grep -q brave-browser; then
+                error "Brave Browser package not found in zypper repositories. Please check your repo configuration."
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                exit 1
+            fi
+            if ! zypper install -y brave-browser; then
+                error "Failed to install Brave Browser."
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                exit 1
+            fi
             ;;
         "emerge")
             echo "www-client/brave-bin" >> /etc/portage/package.accept_keywords
-            emerge -q www-client/brave-bin
+            if ! emerge -q www-client/brave-bin; then
+                error "Failed to install Brave Browser via emerge."
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                exit 1
+            fi
             ;;
     esac
 }
@@ -209,20 +236,82 @@ update_brave() {
     esac
 }
 
-# Ultra-hardened privacy policies
-apply_system_policies() {
-    info "Applying ultra-hardened privacy policies..."
-    
-    mkdir -p /etc/brave/policies/managed/
-    
-    cat > /etc/brave/policies/managed/privacy-policy.json << 'EOF'
+# Debloat options and defaults
+DEBLOAT_OPTIONS=(
+  "Rewards"
+  "Wallet"
+  "VPN"
+  "News"
+  "Talk"
+  "Autofill"
+  "PasswordManager"
+  "SafeBrowsing"
+  "Sync"
+  "Spellcheck"
+  "SearchSuggestions"
+  "BackgroundMode"
+  "WebStore"
+  "BookmarksBar"
+  "HomeButton"
+  "ImportBookmarks"
+  "ImportHistory"
+  "ImportPasswords"
+  "ImportSearchEngine"
+  "Popups"
+  "WebBluetooth"
+  "WebUSB"
+  "FileSystemRead"
+  "FileSystemWrite"
+  "Serial"
+  "HID"
+  "CloudPrint"
+  "AudioCapture"
+  "VideoCapture"
+  "ScreenCapture"
+  "MediaRouter"
+  "CastIcon"
+  "MetricsReporting"
+  "LogUpload"
+  "Heartbeat"
+)
+
+# Default: all debloat options enabled
+for opt in "${DEBLOAT_OPTIONS[@]}"; do
+  eval "DEBLOAT_${opt}=1"
+done
+
+# Prompt user for debloat selection
+prompt_debloat_options() {
+  echo
+  echo -e "${CYAN}Debloat Options:${NC}"
+  read -p "Do you want to skip selection and apply ALL debloat options? [Y/n]: " skip_all
+  skip_all=${skip_all:-Y}
+  if [[ $skip_all =~ ^[Yy]$ ]]; then
+    info "Applying all debloat options."
+    return
+  fi
+  echo -e "${YELLOW}You will be prompted for each debloat option. Enter 'y' to apply, 'n' to skip.${NC}"
+  for opt in "${DEBLOAT_OPTIONS[@]}"; do
+    read -p "Apply debloat for $opt? [Y/n]: " ans
+    ans=${ans:-Y}
+    if [[ $ans =~ ^[Yy]$ ]]; then
+      eval "DEBLOAT_${opt}=1"
+    else
+      eval "DEBLOAT_${opt}=0"
+    fi
+  done
+}
+
+# Modular system policy generator
+write_system_policy() {
+  cat > /etc/brave/policies/managed/privacy-policy.json <<EOF
 {
-    "AutoplayAllowed": false,
-    "DefaultNotificationsSetting": 2,
-    "DefaultGeolocationSetting": 2,
-    "DefaultCamerasSetting": 2,
-    "DefaultMicrophonesSetting": 2,
-    "DefaultSensorsSetting": 2,
+$( [[ $DEBLOAT_AutoplayAllowed -eq 1 ]] && echo '    "AutoplayAllowed": false,' )
+$( [[ $DEBLOAT_DefaultNotificationsSetting -eq 1 ]] && echo '    "DefaultNotificationsSetting": 2,' )
+$( [[ $DEBLOAT_DefaultGeolocationSetting -eq 1 ]] && echo '    "DefaultGeolocationSetting": 2,' )
+$( [[ $DEBLOAT_DefaultCamerasSetting -eq 1 ]] && echo '    "DefaultCamerasSetting": 2,' )
+$( [[ $DEBLOAT_DefaultMicrophonesSetting -eq 1 ]] && echo '    "DefaultMicrophonesSetting": 2,' )
+$( [[ $DEBLOAT_DefaultSensorsSetting -eq 1 ]] && echo '    "DefaultSensorsSetting": 2,' )
     "DefaultSearchProviderEnabled": true,
     "DefaultSearchProviderName": "DuckDuckGo",
     "DefaultSearchProviderSearchURL": "https://duckduckgo.com/?q={searchTerms}&t=brave",
@@ -230,40 +319,40 @@ apply_system_policies() {
     "HomepageLocation": "about:blank",
     "NewTabPageLocation": "about:blank",
     "RestoreOnStartup": 1,
-    "SafeBrowsingEnabled": false,
-    "SafeBrowsingExtendedReportingEnabled": false,
-    "SearchSuggestEnabled": false,
-    "SpellcheckEnabled": false,
-    "SyncDisabled": true,
+$( [[ $DEBLOAT_SafeBrowsing -eq 1 ]] && echo '    "SafeBrowsingEnabled": false,' )
+$( [[ $DEBLOAT_SafeBrowsing -eq 1 ]] && echo '    "SafeBrowsingExtendedReportingEnabled": false,' )
+$( [[ $DEBLOAT_SearchSuggestions -eq 1 ]] && echo '    "SearchSuggestEnabled": false,' )
+$( [[ $DEBLOAT_Spellcheck -eq 1 ]] && echo '    "SpellcheckEnabled": false,' )
+$( [[ $DEBLOAT_Sync -eq 1 ]] && echo '    "SyncDisabled": true,' )
     "TorDisabled": false,
     "WebRTCIPHandlingPolicy": "disable_non_proxied_udp",
-    "MetricsReportingEnabled": false,
-    "AutofillAddressEnabled": false,
-    "AutofillCreditCardEnabled": false,
-    "PasswordManagerEnabled": false,
-    "TranslateEnabled": false,
+$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "MetricsReportingEnabled": false,' )
+$( [[ $DEBLOAT_Autofill -eq 1 ]] && echo '    "AutofillAddressEnabled": false,' )
+$( [[ $DEBLOAT_Autofill -eq 1 ]] && echo '    "AutofillCreditCardEnabled": false,' )
+$( [[ $DEBLOAT_PasswordManager -eq 1 ]] && echo '    "PasswordManagerEnabled": false,' )
+$( [[ $DEBLOAT_Translate -eq 1 ]] && echo '    "TranslateEnabled": false,' )
     "NetworkPredictionOptions": 2,
-    "BackgroundModeEnabled": false,
-    "HideWebStoreIcon": true,
-    "BookmarkBarEnabled": false,
-    "ShowHomeButton": false,
+$( [[ $DEBLOAT_BackgroundMode -eq 1 ]] && echo '    "BackgroundModeEnabled": false,' )
+$( [[ $DEBLOAT_WebStore -eq 1 ]] && echo '    "HideWebStoreIcon": true,' )
+$( [[ $DEBLOAT_BookmarksBar -eq 1 ]] && echo '    "BookmarkBarEnabled": false,' )
+$( [[ $DEBLOAT_HomeButton -eq 1 ]] && echo '    "ShowHomeButton": false,' )
     "BrowserSignin": 0,
-    "ImportBookmarks": false,
-    "ImportHistory": false,
-    "ImportSavedPasswords": false,
-    "ImportSearchEngine": false,
-    "DefaultPopupsSetting": 2,
-    "DefaultWebBluetoothGuardSetting": 2,
-    "DefaultWebUsbGuardSetting": 2,
-    "DefaultFileSystemReadGuardSetting": 2,
-    "DefaultFileSystemWriteGuardSetting": 2,
-    "DefaultSerialGuardSetting": 2,
-    "DefaultHidGuardSetting": 2,
-    "BraveRewardsDisabled": true,
-    "BraveWalletDisabled": true,
-    "BraveVPNDisabled": true,
-    "BraveNewsDisabled": true,
-    "BraveTalkDisabled": true,
+$( [[ $DEBLOAT_ImportBookmarks -eq 1 ]] && echo '    "ImportBookmarks": false,' )
+$( [[ $DEBLOAT_ImportHistory -eq 1 ]] && echo '    "ImportHistory": false,' )
+$( [[ $DEBLOAT_ImportPasswords -eq 1 ]] && echo '    "ImportSavedPasswords": false,' )
+$( [[ $DEBLOAT_ImportSearchEngine -eq 1 ]] && echo '    "ImportSearchEngine": false,' )
+$( [[ $DEBLOAT_Popups -eq 1 ]] && echo '    "DefaultPopupsSetting": 2,' )
+$( [[ $DEBLOAT_WebBluetooth -eq 1 ]] && echo '    "DefaultWebBluetoothGuardSetting": 2,' )
+$( [[ $DEBLOAT_WebUSB -eq 1 ]] && echo '    "DefaultWebUsbGuardSetting": 2,' )
+$( [[ $DEBLOAT_FileSystemRead -eq 1 ]] && echo '    "DefaultFileSystemReadGuardSetting": 2,' )
+$( [[ $DEBLOAT_FileSystemWrite -eq 1 ]] && echo '    "DefaultFileSystemWriteGuardSetting": 2,' )
+$( [[ $DEBLOAT_Serial -eq 1 ]] && echo '    "DefaultSerialGuardSetting": 2,' )
+$( [[ $DEBLOAT_HID -eq 1 ]] && echo '    "DefaultHidGuardSetting": 2,' )
+$( [[ $DEBLOAT_Rewards -eq 1 ]] && echo '    "BraveRewardsDisabled": true,' )
+$( [[ $DEBLOAT_Wallet -eq 1 ]] && echo '    "BraveWalletDisabled": true,' )
+$( [[ $DEBLOAT_VPN -eq 1 ]] && echo '    "BraveVPNDisabled": true,' )
+$( [[ $DEBLOAT_News -eq 1 ]] && echo '    "BraveNewsDisabled": true,' )
+$( [[ $DEBLOAT_Talk -eq 1 ]] && echo '    "BraveTalkDisabled": true,' )
     "BraveSearchDisabled": false,
     "BraveShieldsEnabled": true,
     "BraveShieldsEnabledForUrls": ["*"],
@@ -278,44 +367,29 @@ apply_system_policies() {
     "DeveloperToolsAvailability": 2,
     "ExtensionInstallBlocklist": ["*"],
     "ExtensionInstallAllowlist": [],
-    "CloudPrintSubmitEnabled": false,
+$( [[ $DEBLOAT_CloudPrint -eq 1 ]] && echo '    "CloudPrintSubmitEnabled": false,' )
     "DefaultPrinterSelection": "",
-    "PrintingEnabled": false,
-    "AudioCaptureAllowed": false,
-    "VideoCaptureAllowed": false,
-    "ScreenCaptureAllowed": false,
-    "RemoteAccessHostFirewallTraversal": false,
-    "EnableMediaRouter": false,
-    "ShowCastIconInToolbar": false,
+$( [[ $DEBLOAT_Printing -eq 1 ]] && echo '    "PrintingEnabled": false,' )
+$( [[ $DEBLOAT_AudioCapture -eq 1 ]] && echo '    "AudioCaptureAllowed": false,' )
+$( [[ $DEBLOAT_VideoCapture -eq 1 ]] && echo '    "VideoCaptureAllowed": false,' )
+$( [[ $DEBLOAT_ScreenCapture -eq 1 ]] && echo '    "ScreenCaptureAllowed": false,' )
+$( [[ $DEBLOAT_MediaRouter -eq 1 ]] && echo '    "EnableMediaRouter": false,' )
+$( [[ $DEBLOAT_CastIcon -eq 1 ]] && echo '    "ShowCastIconInToolbar": false,' )
     "CloudManagementEnrollmentToken": "",
-    "ReportVersionData": false,
-    "ReportPolicyData": false,
-    "ReportMachineIDData": false,
-    "ReportUserIDData": false,
-    "HeartbeatEnabled": false,
-    "LogUploadEnabled": false
+$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportVersionData": false,' )
+$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportPolicyData": false,' )
+$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportMachineIDData": false,' )
+$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportUserIDData": false,' )
+$( [[ $DEBLOAT_Heartbeat -eq 1 ]] && echo '    "HeartbeatEnabled": false,' )
+$( [[ $DEBLOAT_LogUpload -eq 1 ]] && echo '    "LogUploadEnabled": false' )
 }
 EOF
-    
-    info "✓ Ultra-hardened system policies applied"
 }
 
-# Enhanced user-specific privacy settings
-apply_user_settings() {
-    info "Applying user-specific privacy settings..."
-    
-    # Get all users with home directories
-    local users
-    users=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// { print $1":"$6 }')
-    
-    while IFS=: read -r username user_home; do
-        [[ -d "$user_home" ]] || continue
-        
-        local brave_dir="$user_home/.config/BraveSoftware/Brave-Browser/Default"
-        mkdir -p "$brave_dir"
-        
-        # Ultra-minimal preferences
-        cat > "$brave_dir/Preferences" << 'EOF'
+# Modular user settings generator
+write_user_preferences() {
+  local brave_dir="$1"
+  cat > "$brave_dir/Preferences" <<EOF
 {
    "brave": {
       "new_tab_page": {
@@ -324,13 +398,13 @@ apply_user_settings() {
          "show_clock": false,
          "show_stats": false,
          "show_top_sites": false,
-         "show_rewards": false
+         "show_rewards": $( [[ $DEBLOAT_Rewards -eq 1 ]] && echo 'false' || echo 'true' )
       },
-      "rewards": { "enabled": false },
-      "wallet": { "enabled": false },
-      "vpn": { "enabled": false },
-      "news": { "enabled": false },
-      "talk": { "enabled": false }
+      "rewards": { "enabled": $( [[ $DEBLOAT_Rewards -eq 1 ]] && echo 'false' || echo 'true' ) },
+      "wallet": { "enabled": $( [[ $DEBLOAT_Wallet -eq 1 ]] && echo 'false' || echo 'true' ) },
+      "vpn": { "enabled": $( [[ $DEBLOAT_VPN -eq 1 ]] && echo 'false' || echo 'true' ) },
+      "news": { "enabled": $( [[ $DEBLOAT_News -eq 1 ]] && echo 'false' || echo 'true' ) },
+      "talk": { "enabled": $( [[ $DEBLOAT_Talk -eq 1 ]] && echo 'false' || echo 'true' ) }
    },
    "profile": {
       "default_content_setting_values": {
@@ -338,7 +412,7 @@ apply_user_settings() {
          "media_stream_camera": 2,
          "media_stream_mic": 2,
          "notifications": 2,
-         "popups": 2,
+         "popups": $( [[ $DEBLOAT_Popups -eq 1 ]] && echo '2' || echo '1' ),
          "cookies": 4,
          "sensors": 2,
          "usb_chooser_data": 2,
@@ -347,23 +421,17 @@ apply_user_settings() {
          "hid_chooser_data": 2
       }
    },
-   "search": { "suggest_enabled": false },
-   "translate": { "enabled": false },
+   "search": { "suggest_enabled": $( [[ $DEBLOAT_SearchSuggestions -eq 1 ]] && echo 'false' || echo 'true' ) },
+   "translate": { "enabled": $( [[ $DEBLOAT_Translate -eq 1 ]] && echo 'false' || echo 'true' ) },
    "autofill": {
-      "profile_enabled": false,
-      "credit_card_enabled": false
+      "profile_enabled": $( [[ $DEBLOAT_Autofill -eq 1 ]] && echo 'false' || echo 'true' ),
+      "credit_card_enabled": $( [[ $DEBLOAT_Autofill -eq 1 ]] && echo 'false' || echo 'true' )
    },
-   "password_manager": { "auto_signin": false },
-   "safebrowsing": { "enabled": false },
+   "password_manager": { "auto_signin": $( [[ $DEBLOAT_PasswordManager -eq 1 ]] && echo 'false' || echo 'true' ) },
+   "safebrowsing": { "enabled": $( [[ $DEBLOAT_SafeBrowsing -eq 1 ]] && echo 'false' || echo 'true' ) },
    "net": { "network_prediction_options": 2 }
 }
 EOF
-        
-        # Set ownership
-        chown -R "$username:$(id -gn "$username")" "$user_home/.config/BraveSoftware" 2>/dev/null || true
-        
-        info "✓ Privacy settings applied for user: $username"
-    done <<< "$users"
 }
 
 # Remove telemetry and tracking files
@@ -513,6 +581,7 @@ EOF
     fi
     
     # Apply privacy enhancements
+    prompt_debloat_options
     apply_system_policies
     apply_user_settings
     purge_telemetry
