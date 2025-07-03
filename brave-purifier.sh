@@ -40,18 +40,27 @@ check_root() {
 detect_package_manager() {
     log "Detecting system package manager..."
     
+    # Detect Linux Mint
+    if [ -f /etc/linuxmint/info ]; then
+        IS_MINT=1
+        MINT_VERSION=$(grep 'RELEASE=' /etc/linuxmint/info | cut -d'=' -f2 | tr -d '"')
+        warn "Linux Mint detected (version $MINT_VERSION). Mint sometimes has issues with third-party repositories. If you encounter 'does not have a Release file' errors, check your sources in /etc/apt/sources.list.d/."
+    else
+        IS_MINT=0
+    fi
+
     if command -v apt >/dev/null 2>&1; then
-        PM="apt" && log "✓ APT detected (Debian/Ubuntu)"
+        PM="apt" && log "\u2713 APT detected (Debian/Ubuntu/Mint)"
     elif command -v dnf >/dev/null 2>&1; then
-        PM="dnf" && log "✓ DNF detected (Fedora/RHEL)"
+        PM="dnf" && log "\u2713 DNF detected (Fedora/RHEL)"
     elif command -v yum >/dev/null 2>&1; then
-        PM="yum" && log "✓ YUM detected (CentOS/RHEL)"
+        PM="yum" && log "\u2713 YUM detected (CentOS/RHEL)"
     elif command -v pacman >/dev/null 2>&1; then
-        PM="pacman" && log "✓ Pacman detected (Arch Linux)"
+        PM="pacman" && log "\u2713 Pacman detected (Arch Linux)"
     elif command -v zypper >/dev/null 2>&1; then
-        PM="zypper" && log "✓ Zypper detected (openSUSE)"
+        PM="zypper" && log "\u2713 Zypper detected (openSUSE)"
     elif command -v emerge >/dev/null 2>&1; then
-        PM="emerge" && log "✓ Portage detected (Gentoo)"
+        PM="emerge" && log "\u2713 Portage detected (Gentoo)"
     else
         error "Unsupported package manager. Supported: APT, DNF, YUM, Pacman, Zypper, Portage"
         exit 1
@@ -64,7 +73,12 @@ install_dependencies() {
     
     case $PM in
         "apt")
-            apt update -qq && apt install -y curl gnupg >/dev/null 2>&1
+            if ! apt update -qq; then
+                error "apt update failed. This may be due to a broken or third-party repository (e.g., Cloudflare WARP). Please check /etc/apt/sources.list.d/ and remove or fix any problematic sources."
+                warn "For the error: 'does not have a Release file', see the Troubleshooting section in the README."
+                exit 1
+            fi
+            apt install -y curl gnupg >/dev/null 2>&1
             ;;
         "dnf"|"yum")
             $PM install -y curl gnupg2 >/dev/null 2>&1
@@ -94,10 +108,17 @@ install_brave() {
             echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" | \
                 tee /etc/apt/sources.list.d/brave-browser-release.list >/dev/null
             
-            apt update -qq && apt install -y brave-browser
+            if ! apt update -qq; then
+                error "apt update failed after adding Brave repo. This may be due to a broken or third-party repository (e.g., Cloudflare WARP). Please check /etc/apt/sources.list.d/ and remove or fix any problematic sources."
+                warn "For the error: 'does not have a Release file', see the Troubleshooting section in the README."
+                exit 1
+            fi
+            if ! apt install -y brave-browser; then
+                error "Failed to install Brave Browser. This may be due to broken sources or network issues."
+                exit 1
+            fi
             ;;
         "dnf"|"yum")
-            # Import key securely
             rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
             $PM config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
             $PM install -y brave-browser

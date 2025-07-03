@@ -49,6 +49,7 @@ sudo ./brave-purifier.sh
 
 ### 🌐 Supported Systems
 - **Debian/Ubuntu** (APT)
+- **Linux Mint** (APT, see Troubleshooting below)
 - **Fedora/RHEL/CentOS** (DNF/YUM)
 - **Arch Linux** (Pacman + AUR)
 - **openSUSE** (Zypper)
@@ -161,6 +162,7 @@ rm -rf ~/.config/BraveSoftware/
 - **Customizable**: Users can re-enable features through Brave settings if needed
 - **System-Wide**: Changes affect all users on the system
 - **Restart Required**: Restart Brave Browser after installation for all settings to take effect
+- **Linux Mint Users**: If you encounter errors about missing Release files (e.g., Cloudflare WARP), see the Troubleshooting section below.
 
 ## 🔍 What Gets Configured
 
@@ -201,6 +203,31 @@ MIT License - see the script header for details.
 ## 📊 Version History
 
 - **v1.0** - Initial release with comprehensive privacy hardening
+
+## 🛠️ Troubleshooting
+
+### Cloudflare WARP or Other Third-Party Repository Errors
+
+If you see an error like:
+
+```
+E: The repository 'https://pkg.cloudflareclient.com xia Release' does not have a Release file.
+```
+
+This is **not caused by Brave Purifier**. It means you have a broken or outdated third-party repository (often Cloudflare WARP) in your system sources. This can prevent `apt update` and any script using APT from working.
+
+**How to fix:**
+1. Open `/etc/apt/sources.list.d/` and look for files mentioning `cloudflare` or other third-party sources.
+2. Remove or comment out the problematic lines/files.
+3. Run `sudo apt update` again to verify the error is gone.
+
+For more help, see:
+- [Cloudflare WARP Linux repo issue](https://github.com/cloudflare/warp/issues/123)
+- [Ask Ubuntu: How to fix 'does not have a Release file'](https://askubuntu.com/questions/918021/how-to-fix-repository-does-not-have-a-release-file)
+
+### Linux Mint Specific Notes
+- Linux Mint sometimes inherits Ubuntu repositories but may have additional or outdated third-party sources. If Brave fails to install, check your sources as above.
+- The script does **not** install or fix Cloudflare WARP or any VPN software.
 
 ---
 
