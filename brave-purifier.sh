@@ -3,6 +3,8 @@
 # Brave Browser Purifier Script
 # Ultra-lightweight privacy-focused installer and debloater
 # Version: 1.0
+# Author: nightcodex7
+# Repository: https://github.com/nightcodex7/brave-purifier
 # License: MIT
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
@@ -15,6 +17,10 @@ readonly BLUE='\033[0;34m'
 readonly CYAN='\033[0;36m'
 readonly NC='\033[0m'
 
+# Script metadata
+readonly SCRIPT_VERSION="1.0"
+readonly SCRIPT_NAME="Brave Purifier"
+
 # Logging functions
 log() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
@@ -23,7 +29,11 @@ info() { echo -e "${CYAN}[PURIFIER]${NC} $1"; }
 
 # Check root privileges
 check_root() {
-    [[ $EUID -eq 0 ]] || { error "Root privileges required. Use: sudo $0"; exit 1; }
+    if [[ $EUID -ne 0 ]]; then
+        error "Root privileges required. Please run with sudo:"
+        echo -e "${CYAN}sudo $0${NC}"
+        exit 1
+    fi
 }
 
 # Detect package manager with enhanced support
@@ -99,8 +109,11 @@ install_brave() {
             elif command -v paru >/dev/null 2>&1; then
                 sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" paru -S --noconfirm brave-bin
             else
-                warn "AUR helper not found. Please install brave-bin manually from AUR"
-                exit 1
+                warn "AUR helper not found. Installing from official repositories..."
+                pacman -S --noconfirm brave-browser 2>/dev/null || {
+                    error "Brave not available in official repos. Please install an AUR helper (yay/paru) first."
+                    exit 1
+                }
             fi
             ;;
         "zypper")
@@ -363,13 +376,66 @@ show_completion() {
     echo
 }
 
+# Show help information
+show_help() {
+    echo -e "${BLUE}$SCRIPT_NAME v$SCRIPT_VERSION${NC}"
+    echo "Ultra-lightweight privacy-focused Brave Browser installer and debloater"
+    echo
+    echo -e "${CYAN}Usage:${NC}"
+    echo "  sudo $0 [OPTIONS]"
+    echo
+    echo -e "${CYAN}Options:${NC}"
+    echo "  -h, --help     Show this help message"
+    echo "  -v, --version  Show version information"
+    echo
+    echo -e "${CYAN}Examples:${NC}"
+    echo "  sudo $0                    # Install/update and purify Brave"
+    echo "  sudo $0 --help             # Show help"
+    echo
+    echo -e "${CYAN}Repository:${NC} https://github.com/nightcodex7/brave-purifier"
+}
+
+# Show version information
+show_version() {
+    echo -e "${BLUE}$SCRIPT_NAME${NC} version ${GREEN}$SCRIPT_VERSION${NC}"
+    echo "Author: nightcodex7"
+    echo "Repository: https://github.com/nightcodex7/brave-purifier"
+    echo "License: MIT"
+}
+
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -v|--version)
+                show_version
+                exit 0
+                ;;
+            *)
+                error "Unknown option: $1"
+                echo "Use --help for usage information"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
 # Main execution with enhanced error handling
 main() {
+    # Parse command line arguments
+    parse_arguments "$@"
+    
     echo -e "${BLUE}"
     cat << 'EOF'
 ╔══════════════════════════════════════════════════════════════╗
 ║                    BRAVE PURIFIER v1.0                      ║
 ║          Ultra-Lightweight Privacy-Focused Installer        ║
+║                    by nightcodex7                           ║
 ╚══════════════════════════════════════════════════════════════╝
 EOF
     echo -e "${NC}"
@@ -406,5 +472,5 @@ EOF
 # Signal handling
 trap 'error "Script interrupted"; exit 130' INT TERM
 
-# Execute main function
+# Execute main function with all arguments
 main "$@"

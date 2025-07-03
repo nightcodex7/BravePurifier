@@ -2,17 +2,27 @@
 
 **Ultra-lightweight privacy-focused Brave Browser installer and debloater**
 
-![Brave Purifier](https://raw.githubusercontent.com/yourusername/brave-purifier/main/brave-purifier-banner.png)
+[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/nightcodex7/brave-purifier)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/nightcodex7/brave-purifier/blob/main/LICENSE)
+[![Shell Script](https://img.shields.io/badge/shell-bash-orange.svg)](https://github.com/nightcodex7/brave-purifier)
 
-## 🚀 Quick Install
+## 🚀 Quick Start
 
+**One-line installation:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/brave-purifier/main/brave-purifier.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh | sudo bash
+```
+
+**Or download and run:**
+```bash
+wget https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh
+chmod +x brave-purifier.sh
+sudo ./brave-purifier.sh
 ```
 
 ## 📋 What It Does
 
-**Brave Purifier** is an ultra-lightweight script that installs Brave Browser and applies maximum privacy hardening:
+**Brave Purifier** is an ultra-lightweight script that installs Brave Browser and applies maximum privacy hardening with zero bloat.
 
 ### 🔒 Privacy Enhancements
 - **Zero Telemetry**: Completely disables all data collection and reporting
@@ -21,18 +31,21 @@ curl -fsSL https://raw.githubusercontent.com/yourusername/brave-purifier/main/br
 - **WebRTC Protection**: Prevents IP address leaks through WebRTC
 - **Search Privacy**: Sets DuckDuckGo as default search engine
 - **Permission Hardening**: Blocks camera, microphone, location, and sensor access
+- **Cookie Protection**: Aggressive cookie blocking and session isolation
 
 ### 🛠️ Debloating Features
-- **Brave Rewards**: Disabled
-- **Brave Wallet**: Disabled  
-- **Brave VPN**: Disabled
-- **Brave News**: Disabled
-- **Brave Talk**: Disabled
+- **Brave Rewards**: Completely disabled
+- **Brave Wallet**: Completely disabled  
+- **Brave VPN**: Completely disabled
+- **Brave News**: Completely disabled
+- **Brave Talk**: Completely disabled
 - **Background Sync**: Disabled
 - **Search Suggestions**: Disabled
 - **Autofill/Passwords**: Disabled
 - **Translation**: Disabled
 - **Safe Browsing**: Disabled (uses local protection)
+- **Extension Store**: Hidden and blocked
+- **Crash Reporting**: Completely removed
 
 ### 🌐 Supported Systems
 - **Debian/Ubuntu** (APT)
@@ -43,16 +56,21 @@ curl -fsSL https://raw.githubusercontent.com/yourusername/brave-purifier/main/br
 
 ## 📥 Installation Methods
 
-### Method 1: Direct Download & Run
+### Method 1: One-Line Install (Recommended)
 ```bash
-wget https://raw.githubusercontent.com/yourusername/brave-purifier/main/brave-purifier.sh
+curl -fsSL https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh | sudo bash
+```
+
+### Method 2: Download and Run
+```bash
+wget https://raw.githubusercontent.com/nightcodex7/brave-purifier/main/brave-purifier.sh
 chmod +x brave-purifier.sh
 sudo ./brave-purifier.sh
 ```
 
-### Method 2: Clone Repository
+### Method 3: Clone Repository
 ```bash
-git clone https://github.com/yourusername/brave-purifier.git
+git clone https://github.com/nightcodex7/brave-purifier.git
 cd brave-purifier
 sudo ./brave-purifier.sh
 ```
@@ -60,32 +78,51 @@ sudo ./brave-purifier.sh
 ## 🔧 Features
 
 - **Automatic Detection**: Identifies your Linux distribution and package manager
-- **Error Handling**: Robust error checking and recovery
+- **Error Handling**: Robust error checking and recovery mechanisms
 - **Minimal Dependencies**: Only requires `curl` and `gnupg`
 - **System-Wide Policies**: Applies privacy settings for all users
 - **User-Specific Settings**: Creates individual privacy configurations
 - **Telemetry Purging**: Removes tracking components and crash reporters
 - **Verification**: Confirms successful installation and configuration
+- **Update Support**: Automatically updates existing installations
 
-## 🛡️ Security
+## 🛡️ Security Features
 
 - **Root Required**: Ensures proper system-wide installation
 - **GPG Verification**: Validates package signatures
 - **Official Repositories**: Uses only official Brave repositories
 - **No External Dependencies**: Minimal attack surface
+- **Signal Handling**: Graceful interruption handling
 
-## 🗂️ File Structure
+## 📖 Usage
+
+### Basic Usage
+```bash
+sudo ./brave-purifier.sh
+```
+
+### Show Help
+```bash
+./brave-purifier.sh --help
+```
+
+### Show Version
+```bash
+./brave-purifier.sh --version
+```
+
+## 🗂️ Project Structure
 
 ```
 brave-purifier/
-├── brave-purifier.sh    # Main installation script
-├── README.md           # This documentation
-└── brave-purifier-banner.png  # Banner image
+├── brave-purifier.sh           # Main installation script
+├── README.md                   # This documentation
+└── images/                     # Screenshots and banner images
 ```
 
 ## 🔄 Updates
 
-The script automatically detects existing Brave installations and updates them while preserving privacy settings.
+The script automatically detects existing Brave installations and updates them while preserving all privacy settings. Simply run the script again to update.
 
 ## 🚫 Uninstallation
 
@@ -123,6 +160,24 @@ rm -rf ~/.config/BraveSoftware/
 - **Some Features Disabled**: Many Brave features are disabled for maximum privacy
 - **Customizable**: Users can re-enable features through Brave settings if needed
 - **System-Wide**: Changes affect all users on the system
+- **Restart Required**: Restart Brave Browser after installation for all settings to take effect
+
+## 🔍 What Gets Configured
+
+### System-Wide Policies
+- Disables all telemetry and data collection
+- Blocks autoplay, notifications, and location access
+- Sets DuckDuckGo as default search engine
+- Enables aggressive ad and tracker blocking
+- Disables WebRTC IP leaks
+- Removes crash reporting and error collection
+
+### User-Specific Settings
+- Configures minimal new tab page
+- Disables all Brave-specific features (Rewards, Wallet, VPN, etc.)
+- Sets aggressive cookie and privacy policies
+- Disables search suggestions and autofill
+- Configures secure content settings
 
 ## 🤝 Contributing
 
@@ -138,10 +193,17 @@ MIT License - see the script header for details.
 
 ## 🔗 Links
 
+- **Repository**: [https://github.com/nightcodex7/brave-purifier](https://github.com/nightcodex7/brave-purifier)
+- **Issues**: [GitHub Issues](https://github.com/nightcodex7/brave-purifier/issues)
 - **Brave Browser**: [https://brave.com](https://brave.com)
 - **DuckDuckGo**: [https://duckduckgo.com](https://duckduckgo.com)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/brave-purifier/issues)
+
+## 📊 Version History
+
+- **v1.0** - Initial release with comprehensive privacy hardening
 
 ---
 
 **Made for privacy-conscious users who want maximum protection with minimal effort.**
+
+*Created by [nightcodex7](https://github.com/nightcodex7)*
