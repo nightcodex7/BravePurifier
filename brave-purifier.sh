@@ -137,6 +137,21 @@ install_brave() {
                 fi
             else
                 error "Brave repository is not available or does not provide a candidate. Please check your sources."
+                echo
+                warn "Diagnostics:"
+                if [ -f /etc/apt/sources.list.d/brave-browser-release.list ]; then
+                    echo "--- /etc/apt/sources.list.d/brave-browser-release.list ---"
+                    cat /etc/apt/sources.list.d/brave-browser-release.list
+                else
+                    echo "Brave repo file not found."
+                fi
+                echo
+                echo "--- apt-cache policy brave-browser ---"
+                apt-cache policy brave-browser || true
+                echo
+                warn "If you see 'Candidate: (none)' or no mention of brave-browser-apt-release.s3.brave.com, the repo is not recognized."
+                warn "Check architecture (arch=amd64) and that the keyring exists: /usr/share/keyrings/brave-browser-archive-keyring.gpg"
+                warn "On Linux Mint, use the Software Sources tool to ensure the repo is enabled."
                 exit 1
             fi
             ;;
