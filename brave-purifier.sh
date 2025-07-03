@@ -2,7 +2,7 @@
 
 # Brave Browser Purifier Script
 # Ultra-lightweight privacy-focused installer and debloater
-# Version: 2.0
+# Version: 1.0
 # License: MIT
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
@@ -368,7 +368,7 @@ main() {
     echo -e "${BLUE}"
     cat << 'EOF'
 ╔══════════════════════════════════════════════════════════════╗
-║                    BRAVE PURIFIER v2.0                      ║
+║                    BRAVE PURIFIER v1.0                      ║
 ║          Ultra-Lightweight Privacy-Focused Installer        ║
 ╚══════════════════════════════════════════════════════════════╝
 EOF
