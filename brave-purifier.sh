@@ -298,6 +298,7 @@ prompt_debloat_options() {
 
 # Modular system policy generator
 write_system_policy() {
+  mkdir -p /etc/brave/policies/managed/
   cat > /etc/brave/policies/managed/privacy-policy.json <<EOF
 {
 $( [[ $DEBLOAT_AutoplayAllowed -eq 1 ]] && echo '    "AutoplayAllowed": false,' )
