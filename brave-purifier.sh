@@ -88,6 +88,24 @@ warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 info() { echo -e "${CYAN}[PURIFIER]${NC} $1"; }
 
+# Safe prompt function to avoid abrupt exit on read errors or non-interactive shells
+safe_read() {
+  local __resultvar=$1
+  local prompt="$2"
+  local default="$3"
+  local input
+  if [ -t 0 ]; then
+    read -p "$prompt" input || input=""
+  else
+    warn "No interactive terminal detected. Using default: $default for prompt: $prompt"
+    input=""
+  fi
+  if [ -z "$input" ]; then
+    input="$default"
+  fi
+  eval "$__resultvar=\"$input\""
+}
+
 # Detect package manager
 detect_package_manager() {
   log "Detecting system package manager..."
@@ -218,7 +236,7 @@ install_brave() {
         exit 1
       fi
       ;;
- zypper)
+    zypper)
       zypper addrepo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo brave-browser
       zypper --gpg-auto-import-keys refresh brave-browser >/dev/null 2>&1 || \
         { error "Failed to refresh Brave repo"; exit 1; }
@@ -316,8 +334,7 @@ done
 prompt_debloat_groups() {
   echo
   echo "Brave Purifier: Choose which features to debloat"
-  read -p "Would you like to apply ALL recommended debloat options? [Y/n]: " skip_all
-  skip_all=${skip_all:-Y}
+  safe_read skip_all "Would you like to apply ALL recommended debloat options? [Y/n]: " "Y"
   if [[ $skip_all =~ ^[Yy]$ ]]; then
     info "Applying all recommended debloat options."
     return
@@ -349,8 +366,7 @@ prompt_debloat_groups() {
     echo
     echo "$label"
     echo "  $desc"
-    read -p "Debloat this group? [Y/n]: " ans
-    ans=${ans:-Y}
+    safe_read ans "Debloat this group? [Y/n]: " "Y"
     if [[ $ans =~ ^[Yy]$ ]]; then
       set_debloat_group "$group" 1
       echo "Debloat applied for this group."
@@ -362,8 +378,7 @@ prompt_debloat_groups() {
   echo
   echo "Home Screen Debloat"
   echo "  Removes cards, date & time, top sites, news feed, and widgets from the new tab page."
-  read -p "Debloat the home screen? [Y/n]: " ans
-  ans=${ans:-Y}
+  safe_read ans "Debloat the home screen? [Y/n]: " "Y"
   if [[ $ans =~ ^[Yy]$ ]]; then
     DEBLOAT[HomeScreen]=1
     echo "Home screen will be debloated."
@@ -380,8 +395,7 @@ prompt_debloat_groups() {
     echo
     echo "$label"
     echo "  $desc"
-    read -p "Debloat this option? [Y/n]: " ans
-    ans=${ans:-Y}
+    safe_read ans "Debloat this option? [Y/n]: " "Y"
     if [[ $ans =~ ^[Yy]$ ]]; then
       DEBLOAT[$opt]=1
       echo "Debloat applied for this option."
@@ -397,8 +411,7 @@ reset_brave_defaults() {
   echo
   warn "This will reset all Brave settings to defaults for all users and system policies."
   warn "It will NOT delete bookmarks, passwords, cookies, credentials, autofill, or sync data."
-  read -p "Are you sure you want to reset all settings to Brave defaults? [y/N]: " reset_ans
-  reset_ans=${reset_ans:-N}
+  safe_read reset_ans "Are you sure you want to reset all settings to Brave defaults? [y/N]: " "N"
   if [[ $reset_ans =~ ^[Yy]$ ]]; then
     rm -f /etc/brave/policies/managed/privacy-policy.json 2>/dev/null
     while IFS=: read -r username user_home; do
@@ -419,8 +432,7 @@ reset_brave_defaults() {
 SET_DEFAULT_BROWSER=0
 prompt_default_browser() {
   echo
-  read -p "Do you want to set Brave as the default browser for your user? [y/N]: " ans
-  ans=${ans:-N}
+  safe_read ans "Do you want to set Brave as the default browser for your user? [y/N]: " "N"
   if [[ $ans =~ ^[Yy]$ ]]; then
     SET_DEFAULT_BROWSER=1
   fi
@@ -430,8 +442,7 @@ prompt_default_browser() {
 SET_GOOGLE_SEARCH=0
 prompt_search_engine() {
   echo
-  read -p "Do you want to set Google as the default search engine? (Otherwise, DuckDuckGo) [y/N]: " ans
-  ans=${ans:-N}
+  safe_read ans "Do you want to set Google as the default search engine? (Otherwise, DuckDuckGo) [y/N]: " "N"
   if [[ $ans =~ ^[Yy]$ ]]; then
     SET_GOOGLE_SEARCH=1
   fi
