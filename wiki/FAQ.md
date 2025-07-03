@@ -335,17 +335,23 @@ All privacy enhancement suggestions are carefully evaluated.
 ## FAQ: Debloat Options
 
 **Q: How do I choose which features to debloat?**
-A: When you run Brave Purifier, you will be prompted for 5 easy-to-understand groups:
-- Brave Features
+A: When you run Brave Purifier, you will be prompted for 5 easy-to-understand groups, plus a few individual options:
+- Brave Features & Services
 - Privacy & Tracking
 - Autofill & Passwords
 - Permissions
-- UI & Suggestions
+- Other UI & Suggestions
+- Search Suggestions (separate)
+- Web Store (separate)
+- Background Mode (separate)
 
-Each group covers a set of related features. Answer 'y' to debloat all features in that group, or 'n' to skip.
+At the start, you can also choose to reset all Brave settings to defaults (does NOT delete bookmarks, passwords, cookies, credentials, autofill, or sync data).
+At the end, you can choose to set Google as the default search engine, or keep it unchanged.
 
-**Q: What does each group include?**
-A: See the Home or Configuration page for a full list of what each group covers.
+Each group or option covers a set of related features. Answer 'y' to debloat all features in that group/option, or 'n' to skip.
+
+**Q: What does each group/option include?**
+A: See the Home or Configuration page for a full list of what each group/option covers.
 
 ---
 

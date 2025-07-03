@@ -34,18 +34,68 @@ sudo ./brave-purifier.sh
 - **Cookie Protection**: Aggressive cookie blocking and session isolation
 
 ### 🛠️ Debloating Features
-- **Brave Rewards**: Completely disabled
-- **Brave Wallet**: Completely disabled  
-- **Brave VPN**: Completely disabled
-- **Brave News**: Completely disabled
-- **Brave Talk**: Completely disabled
-- **Background Sync**: Disabled
-- **Search Suggestions**: Disabled
-- **Autofill/Passwords**: Disabled
-- **Translation**: Disabled
-- **Safe Browsing**: Disabled (uses local protection)
-- **Extension Store**: Hidden and blocked
-- **Crash Reporting**: Completely removed
+
+Brave Purifier now lets you choose privacy/debloat options in simple groups:
+
+- **Brave Features & Services**: Rewards, Wallet, VPN, News, Talk, Sync, pings, analytics, crypto, web3, etc.
+- **Privacy & Tracking**: Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat
+- **Autofill & Passwords**: Autofill, Password Manager
+- **Permissions**: Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.
+- **Other UI & Suggestions**: Spellcheck, Home Button, Import Passwords, Import Search Engine
+
+**Prompted separately:**
+- **Search Suggestions**
+- **Web Store**
+- **Background Mode**
+
+**Reset to Defaults:**
+- At the start, you can choose to reset all Brave settings to defaults (does NOT delete bookmarks, passwords, cookies, credentials, autofill, or sync data).
+
+**Search Engine:**
+- At the end, you can choose to set Google as the default search engine, or keep it unchanged.
+
+**Example prompt:**
+```
+Do you want to reset all Brave settings to defaults before applying debloat? (This will NOT delete bookmarks, passwords, cookies, credentials, autofill, or sync data. Only settings will be reset.) [y/N]: n
+Would you like to apply ALL recommended debloat options? [Y/n]: n
+You will be prompted for each group. Enter 'y' to debloat, 'n' to keep as is.
+
+Brave Features & Services (Rewards, Wallet, VPN, News, Talk, Sync, pings, analytics, crypto, web3, etc.)
+  Disables all Brave-specific services, crypto, rewards, wallet, and telemetry.
+Debloat this group? [Y/n]: y
+
+Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)
+  Disables all tracking, telemetry, and privacy-invasive features.
+Debloat this group? [Y/n]: y
+
+Autofill & Passwords (Autofill, Password Manager)
+  Disables autofill and password manager features.
+Debloat this group? [Y/n]: n
+
+Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)
+  Blocks access to sensitive device features and permissions.
+Debloat this group? [Y/n]: y
+
+Other UI & Suggestions (Spellcheck, Home Button, Import Passwords, Import Search Engine)
+  Disables UI suggestions and import features.
+Debloat this group? [Y/n]: n
+
+Search Suggestions (address bar autocomplete, etc.)
+  Disables search suggestions in the address bar.
+Debloat this option? [Y/n]: y
+
+Web Store (extension/add-on store visibility)
+  Hides the web store icon and blocks extension installs.
+Debloat this option? [Y/n]: y
+
+Background Mode (Brave running in background)
+  Prevents Brave from running in the background.
+Debloat this option? [Y/n]: y
+
+Do you want to set Google as the default search engine? (Otherwise, it will remain unchanged) [y/N]: n
+```
+
+All relevant settings for each group or option will be applied automatically.
 
 ### 🌐 Supported Systems
 - **Debian/Ubuntu** (APT)
@@ -224,10 +274,6 @@ This is **not caused by Brave Purifier**. It means you have a broken or outdated
 For more help, see:
 - [Cloudflare WARP Linux repo issue](https://github.com/cloudflare/warp/issues/123)
 - [Ask Ubuntu: How to fix 'does not have a Release file'](https://askubuntu.com/questions/918021/how-to-fix-repository-does-not-have-a-release-file)
-
-### Linux Mint Specific Notes
-- Linux Mint sometimes inherits Ubuntu repositories but may have additional or outdated third-party sources. If Brave fails to install, check your sources as above.
-- The script does **not** install or fix Cloudflare WARP or any VPN software.
 
 ---
 

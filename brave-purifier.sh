@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# --- SUDO/ROOT HANDLING (must be first) ---
+if [[ $EUID -ne 0 ]]; then
+  if command -v sudo >/dev/null 2>&1; then
+    echo -e "\033[1;33m[SUDO] Root privileges required. Re-running with sudo...\033[0m"
+    exec sudo "$0" "$@"
+    exit 1
+  else
+    echo -e "\033[0;31m[ERROR] Root privileges required, and sudo is not available. Please run as root.\033[0m"
+    exit 1
+  fi
+fi
+
 # Brave Browser Purifier Script
 # Ultra-lightweight privacy-focused installer and debloater
 # Version: 1.0
@@ -244,9 +256,9 @@ update_brave() {
     esac
 }
 
-# Generalized debloat groups
+# Define debloat groups (merged Brave Features & Services)
 DEBLOAT_GROUPS=(
-  "BraveFeatures"
+  "BraveFeaturesServices"
   "PrivacyTracking"
   "AutofillPasswords"
   "Permissions"
@@ -258,8 +270,8 @@ set_debloat_group() {
   local group=$1
   local value=$2
   case $group in
-    BraveFeatures)
-      for opt in Rewards Wallet VPN News Talk Sync; do eval "DEBLOAT_${opt}=$value"; done
+    BraveFeaturesServices)
+      for opt in Rewards Wallet VPN News Talk Sync Pings Analytics Crypto Web3; do eval "DEBLOAT_${opt}=$value"; done
       ;;
     PrivacyTracking)
       for opt in SafeBrowsing MetricsReporting LogUpload Heartbeat; do eval "DEBLOAT_${opt}=$value"; done
@@ -271,7 +283,7 @@ set_debloat_group() {
       for opt in BackgroundMode WebBluetooth WebUSB Serial HID FileSystemRead FileSystemWrite Popups AudioCapture VideoCapture ScreenCapture; do eval "DEBLOAT_${opt}=$value"; done
       ;;
     UISuggestions)
-      for opt in SearchSuggestions Spellcheck BookmarksBar HomeButton WebStore ImportBookmarks ImportHistory ImportPasswords ImportSearchEngine; do eval "DEBLOAT_${opt}=$value"; done
+      for opt in Spellcheck HomeButton ImportPasswords ImportSearchEngine; do eval "DEBLOAT_${opt}=$value"; done
       ;;
   esac
 }
@@ -280,27 +292,47 @@ set_debloat_group() {
 for group in "${DEBLOAT_GROUPS[@]}"; do
   set_debloat_group $group 1
 done
+for opt in SearchSuggestions WebStore BackgroundMode; do
+  eval "DEBLOAT_${opt}=1"
+done
 
-# Prompt user for debloat group selection
+# Friendlier, more relevant prompt for debloat groups
 prompt_debloat_groups() {
   echo
-  echo -e "${CYAN}Debloat Option Groups:${NC}"
-  read -p "Do you want to skip selection and apply ALL debloat options? [Y/n]: " skip_all
+  echo -e "${CYAN}Brave Purifier: Choose which features to debloat for maximum privacy.${NC}"
+  read -p "Would you like to apply ALL recommended debloat options? [Y/n]: " skip_all
   skip_all=${skip_all:-Y}
   if [[ $skip_all =~ ^[Yy]$ ]]; then
-    info "Applying all debloat options."
+    info "Applying all recommended debloat options."
     return
   fi
-  echo -e "${YELLOW}You will be prompted for each debloat group. Enter 'y' to apply, 'n' to skip.${NC}"
+  echo -e "${YELLOW}You will be prompted for each group. Enter 'y' to debloat, 'n' to keep as is.${NC}"
   for group in "${DEBLOAT_GROUPS[@]}"; do
     case $group in
-      BraveFeatures) label="Brave Features (Rewards, Wallet, VPN, News, Talk, Sync)";;
-      PrivacyTracking) label="Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)";;
-      AutofillPasswords) label="Autofill & Passwords (Autofill, Credit Card, Password Manager)";;
-      Permissions) label="Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)";;
-      UISuggestions) label="UI & Suggestions (Search Suggestions, Spellcheck, Bookmarks Bar, Home Button, Web Store, Background Mode, etc.)";;
+      BraveFeaturesServices)
+        label="Brave Features & Services (Rewards, Wallet, VPN, News, Talk, Sync, pings, analytics, crypto, web3, etc.)"
+        desc="Disables all Brave-specific services, crypto, rewards, wallet, and telemetry."
+        ;;
+      PrivacyTracking)
+        label="Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)"
+        desc="Disables all tracking, telemetry, and privacy-invasive features."
+        ;;
+      AutofillPasswords)
+        label="Autofill & Passwords (Autofill, Password Manager)"
+        desc="Disables autofill and password manager features."
+        ;;
+      Permissions)
+        label="Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)"
+        desc="Blocks access to sensitive device features and permissions."
+        ;;
+      UISuggestions)
+        label="Other UI & Suggestions (Spellcheck, Home Button, Import Passwords, Import Search Engine)"
+        desc="Disables UI suggestions and import features."
+        ;;
     esac
-    read -p "Apply debloat for $label? [Y/n]: " ans
+    echo -e "\n${BLUE}$label${NC}"
+    echo -e "  ${desc}"
+    read -p "Debloat this group? [Y/n]: " ans
     ans=${ans:-Y}
     if [[ $ans =~ ^[Yy]$ ]]; then
       set_debloat_group $group 1
@@ -308,6 +340,61 @@ prompt_debloat_groups() {
       set_debloat_group $group 0
     fi
   done
+  # Prompt for the remaining special options
+  for opt in SearchSuggestions WebStore BackgroundMode; do
+    case $opt in
+      SearchSuggestions) label="Search Suggestions (address bar autocomplete, etc.)"; desc="Disables search suggestions in the address bar.";;
+      WebStore) label="Web Store (extension/add-on store visibility)"; desc="Hides the web store icon and blocks extension installs.";;
+      BackgroundMode) label="Background Mode (Brave running in background)"; desc="Prevents Brave from running in the background.";;
+    esac
+    echo -e "\n${BLUE}$label${NC}"
+    echo -e "  ${desc}"
+    read -p "Debloat this option? [Y/n]: " ans
+    ans=${ans:-Y}
+    if [[ $ans =~ ^[Yy]$ ]]; then
+      eval "DEBLOAT_${opt}=1"
+    else
+      eval "DEBLOAT_${opt}=0"
+    fi
+  done
+}
+
+# Reset to Brave defaults (preserve bookmarks, passwords, cookies, credentials, autofill, sync)
+reset_brave_defaults() {
+  echo
+  warn "This will reset all Brave settings to defaults for all users and system policies."
+  warn "It will NOT delete bookmarks, passwords, cookies, credentials, autofill, or sync data."
+  read -p "Are you sure you want to reset all settings to Brave defaults? [y/N]: " reset_ans
+  reset_ans=${reset_ans:-N}
+  if [[ $reset_ans =~ ^[Yy]$ ]]; then
+    # Remove system policy
+    rm -f /etc/brave/policies/managed/privacy-policy.json 2>/dev/null
+    # Remove user Preferences (but not Bookmarks, Login Data, Cookies, etc.)
+    users=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// { print $1":"$6 }')
+    for entry in $users; do
+      username="${entry%%:*}"
+      user_home="${entry#*:}"
+      brave_dir="$user_home/.config/BraveSoftware/Brave-Browser/Default"
+      if [[ -f "$brave_dir/Preferences" ]]; then
+        mv "$brave_dir/Preferences" "$brave_dir/Preferences.bak.$(date +%s)" 2>/dev/null
+      fi
+    done
+    info "Brave settings reset to defaults. Bookmarks, passwords, cookies, credentials, autofill, and sync are preserved."
+  else
+    info "Skipping reset to Brave defaults."
+  fi
+}
+
+# At the end, prompt for search engine
+prompt_search_engine() {
+  echo
+  read -p "Do you want to set Google as the default search engine? (Otherwise, it will remain unchanged) [y/N]: " ans
+  ans=${ans:-N}
+  if [[ $ans =~ ^[Yy]$ ]]; then
+    SET_GOOGLE_SEARCH=1
+  else
+    SET_GOOGLE_SEARCH=0
+  fi
 }
 
 # Modular system policy generator
@@ -595,6 +682,7 @@ EOF
     
     # Apply privacy enhancements
     prompt_debloat_groups
+    prompt_search_engine
     write_system_policy
     # Apply user settings for all users
     local users
