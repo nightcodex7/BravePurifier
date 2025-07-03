@@ -4,7 +4,7 @@
 # Ultra-lightweight privacy-focused installer and debloater
 # Version: 1.0
 # Author: nightcodex7
-# Repository: https://github.com/nightcodex7/brave-purifier
+# Repository: https://github.com/nightcodex7/BravePurifier
 # License: MIT
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
