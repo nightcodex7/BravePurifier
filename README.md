@@ -9,6 +9,7 @@
 [![Shell Script](https://img.shields.io/badge/shell-bash-orange.svg)](https://github.com/nightcodex7/BravePurifier)
 
 ## 🚀 What's New in v1.1
+- **Robust prompt handling**: All user input now uses safe_read, preventing abrupt exits and ensuring compatibility in all environments (interactive and non-interactive)
 - **Associative array debloat logic** for robust, error-free configuration
 - **Improved error handling** and clear exit codes
 - **Valid JSON policy generation** (no trailing commas)
