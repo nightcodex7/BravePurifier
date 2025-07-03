@@ -268,8 +268,7 @@ This is **not caused by Brave Purifier**. It means you have a broken or outdated
 
 **How to fix:**
 1. Open `/etc/apt/sources.list.d/` and look for files mentioning `cloudflare` or other third-party sources.
-2. Remove or comment out the problematic lines/files.
-3. Run `sudo apt update` again to verify the error is gone.
+2. Run `sudo apt update` again to verify the error is gone.
 
 For more help, see:
 - [Cloudflare WARP Linux repo issue](https://github.com/cloudflare/warp/issues/123)
