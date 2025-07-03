@@ -76,6 +76,9 @@ brave_repo_ok() {
     return 1
 }
 
+# Track unrelated apt errors
+declare -g UNRELATED_APT_ERROR=0
+
 # Install minimal dependencies
 install_dependencies() {
     log "Installing minimal dependencies..."
@@ -88,7 +91,8 @@ install_dependencies() {
                     rm -f apt_update.log
                     exit 1
                 fi
-                warn "apt update encountered errors, but not for Brave repo. Attempting to continue..."
+                UNRELATED_APT_ERROR=1
+                warn "apt update encountered errors unrelated to Brave repo. Continuing... (see Troubleshooting in README)"
                 rm -f apt_update.log
             fi
             apt install -y curl gnupg >/dev/null 2>&1
@@ -213,7 +217,17 @@ update_brave() {
     
     case $PM in
         "apt")
-            apt update -qq && apt upgrade -y brave-browser
+            if ! apt update -qq 2>apt_update.log; then
+                if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log; then
+                    error "apt update failed for Brave repo. Please check your network or the Brave repository."
+                    rm -f apt_update.log
+                    exit 1
+                fi
+                UNRELATED_APT_ERROR=1
+                warn "apt update encountered errors unrelated to Brave repo. Continuing... (see Troubleshooting in README)"
+                rm -f apt_update.log
+            fi
+            apt upgrade -y brave-browser >/dev/null 2>&1
             ;;
         "dnf"|"yum")
             $PM upgrade -y brave-browser
@@ -230,68 +244,68 @@ update_brave() {
     esac
 }
 
-# Debloat options and defaults
-DEBLOAT_OPTIONS=(
-  "Rewards"
-  "Wallet"
-  "VPN"
-  "News"
-  "Talk"
-  "Autofill"
-  "PasswordManager"
-  "SafeBrowsing"
-  "Sync"
-  "Spellcheck"
-  "SearchSuggestions"
-  "BackgroundMode"
-  "WebStore"
-  "BookmarksBar"
-  "HomeButton"
-  "ImportBookmarks"
-  "ImportHistory"
-  "ImportPasswords"
-  "ImportSearchEngine"
-  "Popups"
-  "WebBluetooth"
-  "WebUSB"
-  "FileSystemRead"
-  "FileSystemWrite"
-  "Serial"
-  "HID"
-  "CloudPrint"
-  "AudioCapture"
-  "VideoCapture"
-  "ScreenCapture"
-  "MediaRouter"
-  "CastIcon"
-  "MetricsReporting"
-  "LogUpload"
-  "Heartbeat"
+# Generalized debloat groups
+DEBLOAT_GROUPS=(
+  "BraveFeatures"
+  "PrivacyTracking"
+  "AutofillPasswords"
+  "Permissions"
+  "UISuggestions"
 )
 
+# Map group to options
+set_debloat_group() {
+  local group=$1
+  local value=$2
+  case $group in
+    BraveFeatures)
+      for opt in Rewards Wallet VPN News Talk Sync; do eval "DEBLOAT_${opt}=$value"; done
+      ;;
+    PrivacyTracking)
+      for opt in SafeBrowsing MetricsReporting LogUpload Heartbeat; do eval "DEBLOAT_${opt}=$value"; done
+      ;;
+    AutofillPasswords)
+      for opt in Autofill PasswordManager; do eval "DEBLOAT_${opt}=$value"; done
+      ;;
+    Permissions)
+      for opt in BackgroundMode WebBluetooth WebUSB Serial HID FileSystemRead FileSystemWrite Popups AudioCapture VideoCapture ScreenCapture; do eval "DEBLOAT_${opt}=$value"; done
+      ;;
+    UISuggestions)
+      for opt in SearchSuggestions Spellcheck BookmarksBar HomeButton WebStore ImportBookmarks ImportHistory ImportPasswords ImportSearchEngine; do eval "DEBLOAT_${opt}=$value"; done
+      ;;
+  esac
+}
+
 # Default: all debloat options enabled
-for opt in "${DEBLOAT_OPTIONS[@]}"; do
-  eval "DEBLOAT_${opt}=1"
+for group in "${DEBLOAT_GROUPS[@]}"; do
+  set_debloat_group $group 1
 done
 
-# Prompt user for debloat selection
-prompt_debloat_options() {
+# Prompt user for debloat group selection
+prompt_debloat_groups() {
   echo
-  echo -e "${CYAN}Debloat Options:${NC}"
+  echo -e "${CYAN}Debloat Option Groups:${NC}"
   read -p "Do you want to skip selection and apply ALL debloat options? [Y/n]: " skip_all
   skip_all=${skip_all:-Y}
   if [[ $skip_all =~ ^[Yy]$ ]]; then
     info "Applying all debloat options."
     return
   fi
-  echo -e "${YELLOW}You will be prompted for each debloat option. Enter 'y' to apply, 'n' to skip.${NC}"
-  for opt in "${DEBLOAT_OPTIONS[@]}"; do
-    read -p "Apply debloat for $opt? [Y/n]: " ans
+  echo -e "${YELLOW}You will be prompted for each debloat group. Enter 'y' to apply, 'n' to skip.${NC}"
+  for group in "${DEBLOAT_GROUPS[@]}"; do
+    case $group in
+      BraveFeatures) label="Brave Features (Rewards, Wallet, VPN, News, Talk, Sync)";;
+      PrivacyTracking) label="Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)";;
+      AutofillPasswords) label="Autofill & Passwords (Autofill, Credit Card, Password Manager)";;
+      Permissions) label="Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)";;
+      UISuggestions) label="UI & Suggestions (Search Suggestions, Spellcheck, Bookmarks Bar, Home Button, Web Store, Background Mode, etc.)";;
+    esac
+    read -p "Apply debloat for $label? [Y/n]: " ans
     ans=${ans:-Y}
     if [[ $ans =~ ^[Yy]$ ]]; then
-      eval "DEBLOAT_${opt}=1"
+      set_debloat_group $group 1
     else
-      eval "DEBLOAT_${opt}=0"
+      set_debloat_group $group 0
     fi
   done
 }
@@ -494,6 +508,10 @@ show_completion() {
     echo
     echo -e "${YELLOW}Note:${NC} Restart Brave Browser to ensure all settings take effect."
     echo -e "${GREEN}Your privacy is now maximally protected!${NC}"
+    if [[ $UNRELATED_APT_ERROR -eq 1 ]]; then
+        echo
+        warn "Some unrelated apt errors were detected (e.g., Cloudflare WARP repo). See Troubleshooting in the README to fix these."
+    fi
     echo
 }
 
@@ -576,7 +594,7 @@ EOF
     fi
     
     # Apply privacy enhancements
-    prompt_debloat_options
+    prompt_debloat_groups
     write_system_policy
     # Apply user settings for all users
     local users
