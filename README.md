@@ -9,6 +9,8 @@
 [![Shell Script](https://img.shields.io/badge/shell-bash-orange.svg)](https://github.com/nightcodex7/BravePurifier)
 
 ## 🚀 What's New in v1.1
+- **Interactive-only**: The script must be run in an interactive shell; all prompts require user input. There is no non-interactive or --yes mode.
+- **Default browser prompt first**: The prompt to set Brave as the default browser now appears immediately after Brave is installed or updated, before any debloat options.
 - **Robust prompt handling**: All user input now uses safe_read, preventing abrupt exits and ensuring compatibility in all environments (interactive and non-interactive)
 - **Associative array debloat logic** for robust, error-free configuration
 - **Improved error handling** and clear exit codes
