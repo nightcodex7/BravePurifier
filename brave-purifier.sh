@@ -22,23 +22,21 @@ fi
 
 # Brave Browser Purifier Script
 # Ultra-lightweight privacy-focused installer and debloater
-# Version: 1.1
+# Version: 1.2
 # Author: nightcodex7
 # Repository: https://github.com/nightcodex7/BravePurifier
 # License: MIT
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
-# Colors for clean output
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[1;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m'
+# Minimal color support (works on all distros, but not required)
+RED=''; GREEN=''; YELLOW=''; BLUE=''; CYAN=''; NC=''
+if [ -t 1 ] && command -v tput >/dev/null 2>&1; then
+  RED=$(tput setaf 1); GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); BLUE=$(tput setaf 4); CYAN=$(tput setaf 6); NC=$(tput sgr0)
+fi
 
 # Script metadata
-readonly SCRIPT_VERSION="1.1"
+readonly SCRIPT_VERSION="1.2"
 readonly SCRIPT_NAME="Brave Purifier"
 
 # Initialize all DEBLOAT_* variables to 0 to prevent unbound variable errors
