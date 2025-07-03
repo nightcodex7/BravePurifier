@@ -2,41 +2,28 @@
 
 **Ultra-lightweight privacy-focused Brave Browser installer and debloater**
 
-**Version: 1.1**
+**Version: 1.2**
 
-[![Version](https://img.shields.io/badge/version-1.1-blue.svg)](https://github.com/nightcodex7/BravePurifier)
+[![Version](https://img.shields.io/badge/version-1.2-blue.svg)](https://github.com/nightcodex7/BravePurifier)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/nightcodex7/BravePurifier/blob/main/LICENSE)
 [![Shell Script](https://img.shields.io/badge/shell-bash-orange.svg)](https://github.com/nightcodex7/BravePurifier)
 
-## 🚀 What's New in v1.1
-- **Interactive-only**: The script must be run in an interactive shell; all prompts require user input. There is no non-interactive or --yes mode.
-- **Default browser prompt first**: The prompt to set Brave as the default browser now appears immediately after Brave is installed or updated, before any debloat options.
-- **Robust prompt handling**: All user input now uses safe_read, preventing abrupt exits and ensuring compatibility in all environments (interactive and non-interactive)
-- **Associative array debloat logic** for robust, error-free configuration
-- **Improved error handling** and clear exit codes
-- **Valid JSON policy generation** (no trailing commas)
-- **Retry logic for apt update** for network reliability
-- **Expanded telemetry cleanup**
-- **Consistent, colored logging**
-- **Default browser option** (set Brave as default)
-- **Suppresses onboarding, welcome, and telemetry prompts**
-- **Reliably sets default search engine, homepage, and new tab**
-- **Fully interactive**: The script works with 'curl ... | sudo bash' as long as a TTY is available. All prompts use /dev/tty for user input.
-- **ImportSearchEngine debloat option removed**
+## 🚀 What's New in v1.2
+- One-liner install removed; use download + chmod + run for interactive prompts
+- Minimal dependencies, maximum compatibility (works on all major Linux distros)
+- ImportSearchEngine debloat option removed
+- All prompts use /dev/tty for user input (robust interactive mode)
+- Enhanced error handling and privacy hardening
 
 ## 🚀 Quick Start
 
-**One-line installation:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh | sudo bash
-```
-
-**Or download and run:**
-```bash
-wget https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh
+```sh
+curl -fsSL https://raw.githubusercontent.com/nightcodex7/BravePurifier/main/brave-purifier.sh -o brave-purifier.sh
 chmod +x brave-purifier.sh
 sudo ./brave-purifier.sh
 ```
+
+> **Note:** The one-liner `curl ... | sudo bash` is not supported because interactive prompts require a TTY. Always download and run the script directly for full interactive support.
 
 ## 📋 What It Does
 
