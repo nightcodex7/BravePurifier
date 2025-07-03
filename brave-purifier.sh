@@ -108,15 +108,20 @@ install_dependencies() {
     esac
 }
 
+# Check if Brave is installed
+is_brave_installed() {
+    command -v brave-browser >/dev/null 2>&1
+}
+
 # Enhanced Brave installation with better error handling
 install_brave() {
     log "Installing Brave Browser..."
     
     case $PM in
         "apt")
-            # Secure key installation
+            # Secure key installation (always overwrite)
             curl -fsSL https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg | \
-                gpg --dearmor -o /usr/share/keyrings/brave-browser-archive-keyring.gpg
+                gpg --dearmor > /usr/share/keyrings/brave-browser-archive-keyring.gpg
             
             echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" | \
                 tee /etc/apt/sources.list.d/brave-browser-release.list >/dev/null
@@ -130,29 +135,18 @@ install_brave() {
                 warn "apt update encountered errors, but not for Brave repo. Attempting to continue..."
                 rm -f apt_update.log
             fi
-            if brave_repo_ok; then
-                if ! apt install -y brave-browser; then
-                    error "Failed to install Brave Browser. This may be due to broken sources or network issues."
-                    exit 1
-                fi
-            else
+            # Check for candidate
+            local candidate
+            candidate=$(apt-cache policy brave-browser | awk '/Candidate:/ {print $2}')
+            if [[ -z "$candidate" || "$candidate" == "(none)" ]]; then
                 error "Brave repository is not available or does not provide a candidate. Please check your sources."
-                echo
-                warn "Diagnostics:"
-                if [ -f /etc/apt/sources.list.d/brave-browser-release.list ]; then
-                    echo "--- /etc/apt/sources.list.d/brave-browser-release.list ---"
-                    cat /etc/apt/sources.list.d/brave-browser-release.list
-                else
-                    echo "Brave repo file not found."
-                fi
-                echo
-                echo "--- apt-cache policy brave-browser ---"
-                apt-cache policy brave-browser || true
-                echo
-                warn "If you see 'Candidate: (none)' or no mention of brave-browser-apt-release.s3.brave.com, the repo is not recognized."
-                warn "Check architecture (arch=amd64) and that the keyring exists: /usr/share/keyrings/brave-browser-archive-keyring.gpg"
-                warn "On Linux Mint, use the Software Sources tool to ensure the repo is enabled."
-                exit 1
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                return 1
+            fi
+            if ! apt install -y brave-browser; then
+                error "Failed to install Brave Browser."
+                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
+                return 1
             fi
             ;;
         "dnf"|"yum")
@@ -572,18 +566,28 @@ EOF
     install_dependencies
     
     # Install or update Brave
-    if command -v brave-browser >/dev/null 2>&1; then
-        log "Brave Browser detected. Updating..."
+    if is_brave_installed; then
+        log "Brave Browser detected. Skipping installation. Proceeding to update and debloat."
         update_brave
     else
-        log "Installing Brave Browser..."
+        log "Brave Browser not detected. Installing..."
         install_brave
     fi
     
     # Apply privacy enhancements
     prompt_debloat_options
-    apply_system_policies
-    apply_user_settings
+    write_system_policy
+    # Apply user settings for all users
+    local users
+    users=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// { print $1":"$6 }')
+    while IFS=: read -r username user_home; do
+        [[ -d "$user_home" ]] || continue
+        local brave_dir="$user_home/.config/BraveSoftware/Brave-Browser/Default"
+        mkdir -p "$brave_dir"
+        write_user_preferences "$brave_dir"
+        chown -R "$username:$(id -gn "$username")" "$user_home/.config/BraveSoftware" 2>/dev/null || true
+        info "✓ Privacy settings applied for user: $username"
+    done <<< "$users"
     purge_telemetry
     
     # Verify and complete
@@ -591,7 +595,7 @@ EOF
         show_completion
         exit 0
     else
-        error "Installation verification failed"
+        error "Installation verification failed. If you encounter issues, please open an issue or ask in the discussion area of the project."
         exit 1
     fi
 }
