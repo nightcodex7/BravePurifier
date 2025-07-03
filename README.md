@@ -1,166 +1,93 @@
-# Brave Browser Installer and Debloater Script
+# Brave Purifier
 
-A comprehensive bash script that automatically installs/updates Brave Browser and applies privacy-focused debloating settings across multiple Linux distributions.
+**Ultra-lightweight privacy-focused Brave Browser installer and debloater**
 
-![Brave Debloater](https://github.com/yourusername/Brave-installer-and-debloater-script/raw/main/images/brave-debloater-for-linux-v0-jepfv8q5vwke1.webp)
+![Brave Purifier](https://raw.githubusercontent.com/yourusername/brave-purifier/main/brave-purifier-banner.png)
 
-## Features
+## 🚀 Quick Install
 
-### 🚀 **Multi-Distribution Support**
-- **Debian/Ubuntu** (APT)
-- **Fedora/RHEL/CentOS** (DNF)
-- **Arch Linux** (Pacman)
-- **openSUSE** (Zypper)
+```bash
+curl -fsSL https://raw.githubusercontent.com/yourusername/brave-purifier/main/brave-purifier.sh | sudo bash
+```
 
-### 🔒 **Privacy & Security Enhancements**
-- Disables telemetry and data collection
-- Blocks ads and trackers by default
-- Removes unnecessary bloatware features
-- Sets DuckDuckGo as default search engine
-- Disables autoplay and notifications
-- Enhances fingerprinting protection
-- Forces HTTPS upgrades
+## 📋 What It Does
 
-### 🛠️ **Debloating Features**
+**Brave Purifier** is an ultra-lightweight script that installs Brave Browser and applies maximum privacy hardening:
+
+### 🔒 Privacy Enhancements
+- **Zero Telemetry**: Completely disables all data collection and reporting
+- **Ad/Tracker Blocking**: Enables aggressive content blocking by default  
+- **Fingerprinting Protection**: Blocks browser fingerprinting attempts
+- **WebRTC Protection**: Prevents IP address leaks through WebRTC
+- **Search Privacy**: Sets DuckDuckGo as default search engine
+- **Permission Hardening**: Blocks camera, microphone, location, and sensor access
+
+### 🛠️ Debloating Features
 - **Brave Rewards**: Disabled
-- **Brave Wallet**: Disabled
+- **Brave Wallet**: Disabled  
 - **Brave VPN**: Disabled
 - **Brave News**: Disabled
 - **Brave Talk**: Disabled
-- **Background sync**: Disabled
-- **Search suggestions**: Disabled
-- **Geolocation**: Blocked
-- **Camera/Microphone**: Blocked
-- **WebRTC IP leaks**: Prevented
+- **Background Sync**: Disabled
+- **Search Suggestions**: Disabled
+- **Autofill/Passwords**: Disabled
+- **Translation**: Disabled
+- **Safe Browsing**: Disabled (uses local protection)
 
-## Installation
+### 🌐 Supported Systems
+- **Debian/Ubuntu** (APT)
+- **Fedora/RHEL/CentOS** (DNF/YUM)
+- **Arch Linux** (Pacman + AUR)
+- **openSUSE** (Zypper)
+- **Gentoo** (Portage)
 
-### Quick Install (Recommended)
+## 📥 Installation Methods
+
+### Method 1: Direct Download & Run
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/Brave-installer-and-debloater-script/main/brave-installer.sh | sudo bash
+wget https://raw.githubusercontent.com/yourusername/brave-purifier/main/brave-purifier.sh
+chmod +x brave-purifier.sh
+sudo ./brave-purifier.sh
 ```
 
-### Manual Installation
-1. **Download the script:**
-   ```bash
-   wget https://raw.githubusercontent.com/yourusername/Brave-installer-and-debloater-script/main/brave-installer.sh
-   ```
-
-2. **Make it executable:**
-   ```bash
-   chmod +x brave-installer.sh
-   ```
-
-3. **Run the script:**
-   ```bash
-   sudo ./brave-installer.sh
-   ```
-
-## What the Script Does
-
-### 1. **System Detection**
-- Automatically detects your Linux distribution
-- Identifies the appropriate package manager
-- Installs necessary dependencies
-
-### 2. **Brave Installation/Update**
-- Adds official Brave repositories
-- Installs or updates Brave Browser
-- Verifies successful installation
-
-### 3. **System-Wide Policies**
-Creates `/etc/brave/policies/managed/policy.json` with:
-- Privacy-focused default settings
-- Disabled tracking and telemetry
-- Enhanced security configurations
-- Blocked unnecessary permissions
-
-### 4. **User-Specific Preferences**
-Applies additional privacy settings for all users:
-- Custom new tab page settings
-- Disabled widgets and background images
-- Enhanced content blocking
-- Stricter permission defaults
-
-## Supported Distributions
-
-| Distribution | Package Manager | Status |
-|--------------|----------------|---------|
-| Ubuntu/Debian | APT | ✅ Fully Supported |
-| Fedora/RHEL/CentOS | DNF | ✅ Fully Supported |
-| Arch Linux | Pacman | ✅ Fully Supported |
-| openSUSE | Zypper | ✅ Fully Supported |
-
-## Configuration Details
-
-### System Policies Applied
-```json
-{
-    "AutoplayAllowed": false,
-    "DefaultNotificationsSetting": 2,
-    "DefaultGeolocationSetting": 2,
-    "SafeBrowsingEnabled": false,
-    "SyncDisabled": true,
-    "BraveRewardsDisabled": true,
-    "BraveWalletDisabled": true,
-    "WebRTCIPHandlingPolicy": "disable_non_proxied_udp"
-}
-```
-
-### Privacy Enhancements
-- **Search Engine**: DuckDuckGo (privacy-focused)
-- **Homepage**: about:blank (no tracking)
-- **New Tab**: about:blank (clean start)
-- **Autoplay**: Disabled globally
-- **Notifications**: Blocked by default
-- **Location Access**: Denied
-- **Camera/Mic**: Blocked
-- **WebRTC**: IP leak protection enabled
-
-## Customization
-
-### Modifying Settings
-Users can still customize settings through Brave's interface:
-1. Open Brave Browser
-2. Go to `brave://settings/`
-3. Modify preferences as needed
-
-### Advanced Configuration
-Edit the policy file for system-wide changes:
+### Method 2: Clone Repository
 ```bash
-sudo nano /etc/brave/policies/managed/policy.json
+git clone https://github.com/yourusername/brave-purifier.git
+cd brave-purifier
+sudo ./brave-purifier.sh
 ```
 
-## Troubleshooting
+## 🔧 Features
 
-### Common Issues
+- **Automatic Detection**: Identifies your Linux distribution and package manager
+- **Error Handling**: Robust error checking and recovery
+- **Minimal Dependencies**: Only requires `curl` and `gnupg`
+- **System-Wide Policies**: Applies privacy settings for all users
+- **User-Specific Settings**: Creates individual privacy configurations
+- **Telemetry Purging**: Removes tracking components and crash reporters
+- **Verification**: Confirms successful installation and configuration
 
-**1. Permission Denied**
-```bash
-# Solution: Run with sudo
-sudo ./brave-installer.sh
+## 🛡️ Security
+
+- **Root Required**: Ensures proper system-wide installation
+- **GPG Verification**: Validates package signatures
+- **Official Repositories**: Uses only official Brave repositories
+- **No External Dependencies**: Minimal attack surface
+
+## 🗂️ File Structure
+
+```
+brave-purifier/
+├── brave-purifier.sh    # Main installation script
+├── README.md           # This documentation
+└── brave-purifier-banner.png  # Banner image
 ```
 
-**2. Package Manager Not Found**
-```bash
-# Check if your distribution is supported
-cat /etc/os-release
-```
+## 🔄 Updates
 
-**3. Repository Issues**
-```bash
-# Clear package cache and retry
-sudo apt clean && sudo apt update  # For Debian/Ubuntu
-sudo dnf clean all && sudo dnf refresh  # For Fedora/RHEL
-```
+The script automatically detects existing Brave installations and updates them while preserving privacy settings.
 
-### Logs and Debugging
-The script provides colored output for easy debugging:
-- 🟢 **Green**: Successful operations
-- 🟡 **Yellow**: Warnings
-- 🔴 **Red**: Errors
-
-## Uninstallation
+## 🚫 Uninstallation
 
 ### Remove Brave Browser
 ```bash
@@ -170,14 +97,17 @@ sudo apt remove --purge brave-browser
 # Fedora/RHEL
 sudo dnf remove brave-browser
 
-# Arch Linux
-sudo pacman -Rns brave-browser
+# Arch Linux  
+sudo pacman -Rns brave-browser brave-bin
 
 # openSUSE
 sudo zypper remove brave-browser
+
+# Gentoo
+sudo emerge -C www-client/brave-bin
 ```
 
-### Remove Policies
+### Remove Privacy Policies
 ```bash
 sudo rm -rf /etc/brave/
 ```
@@ -187,44 +117,31 @@ sudo rm -rf /etc/brave/
 rm -rf ~/.config/BraveSoftware/
 ```
 
-## Security Considerations
+## ⚠️ Important Notes
 
-- Script requires root privileges for system-wide installation
-- All downloads are from official Brave repositories
-- GPG signatures are verified automatically
-- No external dependencies beyond standard tools
+- **Privacy First**: This script prioritizes privacy over convenience
+- **Some Features Disabled**: Many Brave features are disabled for maximum privacy
+- **Customizable**: Users can re-enable features through Brave settings if needed
+- **System-Wide**: Changes affect all users on the system
 
-## Contributing
+## 🤝 Contributing
 
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/improvement
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -am 'Add new feature'
-   ```
-4. **Push to the branch**
-   ```bash
-   git push origin feature/improvement
-   ```
-5. **Create a Pull Request**
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/enhancement`)
+3. Commit your changes (`git commit -am 'Add enhancement'`)
+4. Push to the branch (`git push origin feature/enhancement`)
+5. Open a Pull Request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see the script header for details.
 
-## Disclaimer
+## 🔗 Links
 
-This script modifies system settings and browser configurations. While designed to enhance privacy and security, users should review the changes and ensure they meet their specific requirements.
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/Brave-installer-and-debloater-script/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/Brave-installer-and-debloater-script/discussions)
-- **Wiki**: [Project Wiki](https://github.com/yourusername/Brave-installer-and-debloater-script/wiki)
+- **Brave Browser**: [https://brave.com](https://brave.com)
+- **DuckDuckGo**: [https://duckduckgo.com](https://duckduckgo.com)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/brave-purifier/issues)
 
 ---
 
-**Made with ❤️ for privacy-conscious Linux users**
+**Made for privacy-conscious users who want maximum protection with minimal effort.**
