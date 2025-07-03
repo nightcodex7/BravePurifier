@@ -171,9 +171,10 @@ BravePurifier/
 └── images/                     # Screenshots and banner images
 ```
 
-## 🔄 Updates
+## 🚀 Cross-Platform Support
 
-The script automatically detects existing Brave installations and updates them while preserving all privacy settings. Simply run the script again to update.
+- **Linux**: Full support for all major distributions.
+- **Windows**: Support coming soon! Windows compatibility is a work in progress and will be available in a future release.
 
 ## 🚫 Uninstallation
 
@@ -249,10 +250,6 @@ MIT License - see the script header for details.
 - **Issues**: [GitHub Issues](https://github.com/nightcodex7/BravePurifier/issues)
 - **Brave Browser**: [https://brave.com](https://brave.com)
 - **DuckDuckGo**: [https://duckduckgo.com](https://duckduckgo.com)
-
-## 📊 Version History
-
-- **v1.0** - Initial release with comprehensive privacy hardening
 
 ## 🛠️ Troubleshooting
 
