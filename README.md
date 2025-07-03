@@ -2,9 +2,22 @@
 
 **Ultra-lightweight privacy-focused Brave Browser installer and debloater**
 
-[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/nightcodex7/BravePurifier)
+**Version: 1.1**
+
+[![Version](https://img.shields.io/badge/version-1.1-blue.svg)](https://github.com/nightcodex7/BravePurifier)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/nightcodex7/BravePurifier/blob/main/LICENSE)
 [![Shell Script](https://img.shields.io/badge/shell-bash-orange.svg)](https://github.com/nightcodex7/BravePurifier)
+
+## 🚀 What's New in v1.1
+- **Associative array debloat logic** for robust, error-free configuration
+- **Improved error handling** and clear exit codes
+- **Valid JSON policy generation** (no trailing commas)
+- **Retry logic for apt update** for network reliability
+- **Expanded telemetry cleanup**
+- **Consistent, colored logging**
+- **Default browser option** (set Brave as default)
+- **Suppresses onboarding, welcome, and telemetry prompts**
+- **Reliably sets default search engine, homepage, and new tab**
 
 ## 🚀 Quick Start
 
@@ -29,9 +42,11 @@ sudo ./brave-purifier.sh
 - **Ad/Tracker Blocking**: Enables aggressive content blocking by default  
 - **Fingerprinting Protection**: Blocks browser fingerprinting attempts
 - **WebRTC Protection**: Prevents IP address leaks through WebRTC
-- **Search Privacy**: Sets DuckDuckGo as default search engine
+- **Search Privacy**: Reliably sets DuckDuckGo or Google as default search engine
 - **Permission Hardening**: Blocks camera, microphone, location, and sensor access
 - **Cookie Protection**: Aggressive cookie blocking and session isolation
+- **No onboarding/welcome/telemetry prompts**: Suppresses all first-run and telemetry dialogs
+- **Default browser option**: Can set Brave as your system default browser
 
 ### 🛠️ Debloating Features
 
@@ -44,15 +59,17 @@ Brave Purifier now lets you choose privacy/debloat options in simple groups:
 - **Other UI & Suggestions**: Spellcheck, Home Button, Import Passwords, Import Search Engine
 
 **Prompted separately:**
+- **Home Screen Debloat**
 - **Search Suggestions**
 - **Web Store**
 - **Background Mode**
+- **Set Brave as Default Browser**
 
 **Reset to Defaults:**
 - At the start, you can choose to reset all Brave settings to defaults (does NOT delete bookmarks, passwords, cookies, credentials, autofill, or sync data).
 
 **Search Engine:**
-- At the end, you can choose to set Google as the default search engine, or keep it unchanged.
+- At the end, you can choose to set Google as the default search engine, or keep it as DuckDuckGo.
 
 **Example prompt:**
 ```
@@ -69,7 +86,7 @@ Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)
 Debloat this group? [Y/n]: y
 
 Autofill & Passwords (Autofill, Password Manager)
-  Disables autofill and password manager features.
+  Disables all autofill (addresses, credit cards, forms) and password manager features for maximum privacy.
 Debloat this group? [Y/n]: n
 
 Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)
@@ -79,6 +96,10 @@ Debloat this group? [Y/n]: y
 Other UI & Suggestions (Spellcheck, Home Button, Import Passwords, Import Search Engine)
   Disables UI suggestions and import features.
 Debloat this group? [Y/n]: n
+
+Home Screen Debloat
+  Removes cards, date & time, top sites, news feed, and widgets from the new tab page, but keeps the favourites (pinned sites) area visible.
+Debloat the home screen? [Y/n]: y
 
 Search Suggestions (address bar autocomplete, etc.)
   Disables search suggestions in the address bar.
@@ -92,7 +113,11 @@ Background Mode (Brave running in background)
   Prevents Brave from running in the background.
 Debloat this option? [Y/n]: y
 
-Do you want to set Google as the default search engine? (Otherwise, it will remain unchanged) [y/N]: n
+Set Brave as default browser?
+  Makes Brave your system default browser.
+Set Brave as default? [Y/n]: y
+
+Do you want to set Google as the default search engine? (Otherwise, DuckDuckGo) [y/N]: n
 ```
 
 All relevant settings for each group or option will be applied automatically.

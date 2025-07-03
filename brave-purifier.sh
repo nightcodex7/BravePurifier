@@ -3,18 +3,22 @@
 # --- SUDO/ROOT HANDLING (must be first) ---
 if [[ $EUID -ne 0 ]]; then
   if command -v sudo >/dev/null 2>&1; then
-    echo -e "\033[1;33m[SUDO] Root privileges required. Re-running with sudo...\033[0m"
+    echo "[SUDO] Root privileges required. Re-running with sudo..."
+    if ! sudo -n true 2>/dev/null; then
+      echo "[ERROR] Sudo requires authentication. Please run as root or ensure sudo access."
+      exit 1
+    fi
     exec sudo "$0" "$@"
     exit 1
   else
-    echo -e "\033[0;31m[ERROR] Root privileges required, and sudo is not available. Please run as root.\033[0m"
+    echo "[ERROR] Root privileges required, and sudo is not available. Please run as root."
     exit 1
   fi
 fi
 
 # Brave Browser Purifier Script
 # Ultra-lightweight privacy-focused installer and debloater
-# Version: 1.0
+# Version: 1.1
 # Author: nightcodex7
 # Repository: https://github.com/nightcodex7/BravePurifier
 # License: MIT
@@ -30,233 +34,236 @@ readonly CYAN='\033[0;36m'
 readonly NC='\033[0m'
 
 # Script metadata
-readonly SCRIPT_VERSION="1.0"
+readonly SCRIPT_VERSION="1.1"
 readonly SCRIPT_NAME="Brave Purifier"
 
+# Initialize all DEBLOAT_* variables to 0 to prevent unbound variable errors
+declare -A DEBLOAT=(
+  [AutoplayAllowed]=0
+  [DefaultNotificationsSetting]=0
+  [DefaultGeolocationSetting]=0
+  [DefaultCamerasSetting]=0
+  [DefaultMicrophonesSetting]=0
+  [DefaultSensorsSetting]=0
+  [Translate]=0
+  [BookmarksBar]=0
+  [ImportHistory]=0
+  [CloudPrint]=0
+  [Printing]=0
+  [MediaRouter]=0
+  [CastIcon]=0
+  [Rewards]=0
+  [Wallet]=0
+  [VPN]=0
+  [News]=0
+  [Talk]=0
+  [SafeBrowsing]=0
+  [MetricsReporting]=0
+  [Autofill]=0
+  [PasswordManager]=0
+  [SearchSuggestions]=0
+  [Spellcheck]=0
+  [Sync]=0
+  [BackgroundMode]=0
+  [WebStore]=0
+  [HomeButton]=0
+  [Popups]=0
+  [WebBluetooth]=0
+  [WebUSB]=0
+  [FileSystemRead]=0
+  [FileSystemWrite]=0
+  [Serial]=0
+  [HID]=0
+  [AudioCapture]=0
+  [VideoCapture]=0
+  [ScreenCapture]=0
+  [Heartbeat]=0
+  [LogUpload]=0
+  [HomeScreen]=1
+)
+
 # Logging functions
-log() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log() { echo -e "${BLUE}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 info() { echo -e "${CYAN}[PURIFIER]${NC} $1"; }
 
-# Check root privileges
-check_root() {
-    if [[ $EUID -ne 0 ]]; then
-        error "Root privileges required. Please run with sudo:"
-        echo -e "${CYAN}sudo $0${NC}"
-        exit 1
-    fi
-}
-
-# Detect package manager with enhanced support
+# Detect package manager
 detect_package_manager() {
-    log "Detecting system package manager..."
-    
-    # Detect Linux Mint
-    if [ -f /etc/linuxmint/info ]; then
-        IS_MINT=1
-        MINT_VERSION=$(grep 'RELEASE=' /etc/linuxmint/info | cut -d'=' -f2 | tr -d '"')
-        warn "Linux Mint detected (version $MINT_VERSION). Mint sometimes has issues with third-party repositories. If you encounter 'does not have a Release file' errors, check your sources in /etc/apt/sources.list.d/."
-    else
-        IS_MINT=0
-    fi
+  log "Detecting system package manager..."
+  IS_MINT=0
+  if [[ -f /etc/linuxmint/info ]]; then
+    IS_MINT=1
+    MINT_VERSION=$(grep 'RELEASE=' /etc/linuxmint/info | cut -d'=' -f2 | tr -d '"')
+    warn "Linux Mint detected (version $MINT_VERSION). Mint may have issues with third-party repositories."
+  fi
 
-    if command -v apt >/dev/null 2>&1; then
-        PM="apt" && log "\u2713 APT detected (Debian/Ubuntu/Mint)"
-    elif command -v dnf >/dev/null 2>&1; then
-        PM="dnf" && log "\u2713 DNF detected (Fedora/RHEL)"
-    elif command -v yum >/dev/null 2>&1; then
-        PM="yum" && log "\u2713 YUM detected (CentOS/RHEL)"
-    elif command -v pacman >/dev/null 2>&1; then
-        PM="pacman" && log "\u2713 Pacman detected (Arch Linux)"
-    elif command -v zypper >/dev/null 2>&1; then
-        PM="zypper" && log "\u2713 Zypper detected (openSUSE)"
-    elif command -v emerge >/dev/null 2>&1; then
-        PM="emerge" && log "\u2713 Portage detected (Gentoo)"
-    else
-        error "Unsupported package manager. Supported: APT, DNF, YUM, Pacman, Zypper, Portage"
-        exit 1
+  PM=""
+  for pm in apt dnf yum pacman zypper emerge; do
+    if command -v "$pm" >/dev/null 2>&1; then
+      PM="$pm"
+      log "✓ $pm detected"
+      break
     fi
+  done
+
+  if [[ -z "$PM" ]]; then
+    error "No supported package manager found. Supported: apt, dnf, yum, pacman, zypper, emerge"
+    exit 1
+  fi
 }
 
-# Helper: Check if Brave repo is present and usable
+# Check if Brave repo is present
 brave_repo_ok() {
-    # Check if Brave repo is in sources and apt-cache policy shows brave-browser candidate
-    grep -q 'brave-browser-apt-release.s3.brave.com' /etc/apt/sources.list.d/brave-browser-release.list 2>/dev/null || return 1
-    apt-cache policy brave-browser | grep -q 'Candidate:' && \
-    apt-cache policy brave-browser | grep -q 'brave-browser-apt-release.s3.brave.com' && return 0
-    return 1
+  case $PM in
+    apt)
+      [[ -f /etc/apt/sources.list.d/brave-browser-release.list ]] && \
+      apt-cache policy brave-browser | grep -q 'Candidate:' && return 0
+      ;;
+    dnf|yum)
+      $PM repolist | grep -q brave-browser && return 0
+      ;;
+    zypper)
+      zypper lr | grep -q brave-browser && return 0
+      ;;
+    *)
+      return 0  # Assume okay for pacman/emerge
+      ;;
+  esac
+  return 1
 }
 
 # Track unrelated apt errors
-declare -g UNRELATED_APT_ERROR=0
+UNRELATED_APT_ERROR=0
 
 # Install minimal dependencies
 install_dependencies() {
-    log "Installing minimal dependencies..."
-    
-    case $PM in
-        "apt")
-            if ! apt update -qq 2>apt_update.log; then
-                if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log; then
-                    error "apt update failed for Brave repo. Please check your network or the Brave repository."
-                    rm -f apt_update.log
-                    exit 1
-                fi
-                UNRELATED_APT_ERROR=1
-                warn "apt update encountered errors unrelated to Brave repo. Continuing... (see Troubleshooting in README)"
-                rm -f apt_update.log
-            fi
-            apt install -y curl gnupg >/dev/null 2>&1
-            ;;
-        "dnf"|"yum")
-            $PM install -y curl gnupg2 >/dev/null 2>&1
-            ;;
-        "pacman")
-            pacman -Sy --noconfirm curl gnupg >/dev/null 2>&1
-            ;;
-        "zypper")
-            zypper refresh -q && zypper install -y curl gpg2 >/dev/null 2>&1
-            ;;
-        "emerge")
-            emerge --sync -q && emerge -q app-crypt/gnupg net-misc/curl
-            ;;
-    esac
+  log "Installing minimal dependencies..."
+  case $PM in
+    apt)
+      if ! apt update -qq 2>apt_update.log; then
+        if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log 2>/dev/null; then
+          error "apt update failed for Brave repo. Check network or repository."
+          rm -f apt_update.log
+          exit 1
+        fi
+        UNRELATED_APT_ERROR=1
+        warn "apt update encountered unrelated errors. Continuing..."
+        rm -f apt_update.log
+      fi
+      apt install -y curl gnupg >/dev/null 2>&1 || { error "Failed to install dependencies"; exit 1; }
+      ;;
+    dnf|yum)
+      $PM install -y curl gnupg2 >/dev/null 2>&1 || { error "Failed to install dependencies"; exit 1; }
+      ;;
+    pacman)
+      pacman -Sy --noconfirm curl gnupg >/dev/null 2>&1 || { error "Failed to install dependencies"; exit 1; }
+      ;;
+    zypper)
+      zypper refresh -q && zypper install -y curl gpg2 >/dev/null 2>&1 || { error "Failed to install dependencies"; exit 1; }
+      ;;
+    emerge)
+      emerge --sync -q && emerge -q app-crypt/gnupg net-misc/curl || { error "Failed to install dependencies"; exit 1; }
+      ;;
+  esac
 }
 
 # Check if Brave is installed
 is_brave_installed() {
-    command -v brave-browser >/dev/null 2>&1
+  command -v brave-browser >/dev/null 2>&1
 }
 
-# Enhanced Brave installation with better error handling
+# Install Brave with retry logic
 install_brave() {
-    log "Installing Brave Browser..."
-    
-    case $PM in
-        "apt")
-            # Secure key installation (always overwrite)
-            curl -fsSL https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg | \
-                gpg --dearmor > /usr/share/keyrings/brave-browser-archive-keyring.gpg
-            
-            echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" | \
-                tee /etc/apt/sources.list.d/brave-browser-release.list >/dev/null
-            
-            if ! apt update -qq 2>apt_update.log; then
-                if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log; then
-                    error "apt update failed for Brave repo. Please check your network or the Brave repository."
-                    rm -f apt_update.log
-                    exit 1
-                fi
-                warn "apt update encountered errors, but not for Brave repo. Attempting to continue..."
-                rm -f apt_update.log
-            fi
-            # Check for candidate
-            local candidate
-            candidate=$(apt-cache policy brave-browser | awk '/Candidate:/ {print $2}')
-            if [[ -z "$candidate" || "$candidate" == "(none)" ]]; then
-                error "Brave repository is not available or does not provide a candidate. Please check your sources."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                return 1
-            fi
-            if ! apt install -y brave-browser; then
-                error "Failed to install Brave Browser."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                return 1
-            fi
-            ;;
-        "dnf"|"yum")
-            rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
-            $PM config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
-            if ! $PM list brave-browser 2>/dev/null | grep -q brave-browser; then
-                error "Brave Browser package not found in $PM repositories. Please check your repo configuration."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                exit 1
-            fi
-            if ! $PM install -y brave-browser; then
-                error "Failed to install Brave Browser."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                exit 1
-            fi
-            ;;
-        "pacman")
-            if command -v yay >/dev/null 2>&1; then
-                if ! sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" yay -S --noconfirm brave-bin; then
-                    error "Failed to install Brave Browser via yay."
-                    warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                    exit 1
-                fi
-            elif command -v paru >/dev/null 2>&1; then
-                if ! sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" paru -S --noconfirm brave-bin; then
-                    error "Failed to install Brave Browser via paru."
-                    warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                    exit 1
-                fi
-            else
-                warn "AUR helper not found. Please install yay or paru to install Brave Browser from the AUR."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                exit 1
-            fi
-            ;;
-        "zypper")
-            zypper addrepo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo brave-browser
-            zypper --gpg-auto-import-keys refresh brave-browser
-            if ! zypper se -s brave-browser | grep -q brave-browser; then
-                error "Brave Browser package not found in zypper repositories. Please check your repo configuration."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                exit 1
-            fi
-            if ! zypper install -y brave-browser; then
-                error "Failed to install Brave Browser."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                exit 1
-            fi
-            ;;
-        "emerge")
-            echo "www-client/brave-bin" >> /etc/portage/package.accept_keywords
-            if ! emerge -q www-client/brave-bin; then
-                error "Failed to install Brave Browser via emerge."
-                warn "If you encounter issues, please open an issue or ask in the discussion area of the project."
-                exit 1
-            fi
-            ;;
-    esac
+  log "Installing Brave Browser..."
+  local retries=3
+  case $PM in
+    apt)
+      curl -fsSL https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg | \
+        gpg --dearmor > /usr/share/keyrings/brave-browser-archive-keyring.gpg 2>/dev/null || \
+        { error "Failed to install Brave GPG key"; exit 1; }
+      echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" | \
+        tee /etc/apt/sources.list.d/brave-browser-release.list >/dev/null
+      for ((i=1; i<=retries; i++)); do
+        if apt update -qq 2>apt_update.log; then
+          break
+        elif grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log 2>/dev/null; then
+          error "apt update failed for Brave repo (attempt $i/$retries)."
+          [[ $i -eq $retries ]] && { rm -f apt_update.log; exit 1; }
+          sleep 5
+        else
+          UNRELATED_APT_ERROR=1
+          warn "apt update encountered unrelated errors. Continuing..."
+          rm -f apt_update.log
+          break
+        fi
+      done
+      apt install -y brave-browser >/dev/null 2>&1 || { error "Failed to install Brave Browser"; exit 1; }
+      ;;
+    dnf|yum)
+      rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc 2>/dev/null || \
+        { error "Failed to import Brave RPM key"; exit 1; }
+      $PM config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+      $PM install -y brave-browser >/dev/null 2>&1 || { error "Failed to install Brave Browser"; exit 1; }
+      ;;
+    pacman)
+      if command -v yay >/dev/null 2>&1; then
+        sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" yay -S --noconfirm brave-bin || \
+          { error "Failed to install Brave via yay"; exit 1; }
+      elif command -v paru >/dev/null 2>&1; then
+        sudo -u "$(logname 2>/dev/null || echo $SUDO_USER)" paru -S --noconfirm brave-bin || \
+          { error "Failed to install Brave via paru"; exit 1; }
+      else
+        error "AUR helper (yay or paru) required for Arch Linux."
+        exit 1
+      fi
+      ;;
+ zypper)
+      zypper addrepo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo brave-browser
+      zypper --gpg-auto-import-keys refresh brave-browser >/dev/null 2>&1 || \
+        { error "Failed to refresh Brave repo"; exit 1; }
+      zypper install -y brave-browser >/dev/null 2>&1 || { error "Failed to install Brave Browser"; exit 1; }
+      ;;
+    emerge)
+      echo "www-client/brave-bin" >> /etc/portage/package.accept_keywords
+      emerge -q www-client/brave-bin || { error "Failed to install Brave via emerge"; exit 1; }
+      ;;
+  esac
 }
 
-# Update existing Brave installation
+# Update Brave
 update_brave() {
-    log "Updating Brave Browser..."
-    
-    case $PM in
-        "apt")
-            if ! apt update -qq 2>apt_update.log; then
-                if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log; then
-                    error "apt update failed for Brave repo. Please check your network or the Brave repository."
-                    rm -f apt_update.log
-                    exit 1
-                fi
-                UNRELATED_APT_ERROR=1
-                warn "apt update encountered errors unrelated to Brave repo. Continuing... (see Troubleshooting in README)"
-                rm -f apt_update.log
-            fi
-            apt upgrade -y brave-browser >/dev/null 2>&1
-            ;;
-        "dnf"|"yum")
-            $PM upgrade -y brave-browser
-            ;;
-        "pacman")
-            pacman -Syu --noconfirm brave-browser brave-bin 2>/dev/null || true
-            ;;
-        "zypper")
-            zypper update -y brave-browser
-            ;;
-        "emerge")
-            emerge -uq www-client/brave-bin
-            ;;
-    esac
+  log "Updating Brave Browser..."
+  case $PM in
+    apt)
+      if ! apt update -qq 2>apt_update.log; then
+        if grep -q 'brave-browser-apt-release.s3.brave.com' apt_update.log 2>/dev/null; then
+          error "apt update failed for Brave repo."
+          rm -f apt_update.log
+          exit 1
+        fi
+        UNRELATED_APT_ERROR=1
+        warn "apt update encountered unrelated errors. Continuing..."
+        rm -f apt_update.log
+      fi
+      apt upgrade -y brave-browser >/dev/null 2>&1 || warn "Failed to update Brave Browser"
+      ;;
+    dnf|yum)
+      $PM upgrade -y brave-browser >/dev/null 2>&1 || warn "Failed to update Brave Browser"
+      ;;
+    pacman)
+      pacman -Syu --noconfirm brave-browser brave-bin 2>/dev/null || warn "Failed to update Brave Browser"
+      ;;
+    zypper)
+      zypper update -y brave-browser >/dev/null 2>&1 || warn "Failed to update Brave Browser"
+      ;;
+    emerge)
+      emerge -uq www-client/brave-bin || warn "Failed to update Brave Browser"
+      ;;
+  esac
 }
 
-# Define debloat groups (merged Brave Features & Services)
+# Define debloat groups
 DEBLOAT_GROUPS=(
   "BraveFeaturesServices"
   "PrivacyTracking"
@@ -271,95 +278,121 @@ set_debloat_group() {
   local value=$2
   case $group in
     BraveFeaturesServices)
-      for opt in Rewards Wallet VPN News Talk Sync Pings Analytics Crypto Web3; do eval "DEBLOAT_${opt}=$value"; done
+      for opt in Rewards Wallet VPN News Talk Sync Pings Analytics Crypto Web3; do
+        DEBLOAT[$opt]=$value
+      done
       ;;
     PrivacyTracking)
-      for opt in SafeBrowsing MetricsReporting LogUpload Heartbeat; do eval "DEBLOAT_${opt}=$value"; done
+      for opt in SafeBrowsing MetricsReporting LogUpload Heartbeat; do
+        DEBLOAT[$opt]=$value
+      done
       ;;
     AutofillPasswords)
-      for opt in Autofill PasswordManager; do eval "DEBLOAT_${opt}=$value"; done
+      DEBLOAT[Autofill]=$value
+      DEBLOAT[PasswordManager]=$value
       ;;
     Permissions)
-      for opt in BackgroundMode WebBluetooth WebUSB Serial HID FileSystemRead FileSystemWrite Popups AudioCapture VideoCapture ScreenCapture; do eval "DEBLOAT_${opt}=$value"; done
+      for opt in BackgroundMode WebBluetooth WebUSB Serial HID FileSystemRead FileSystemWrite Popups AudioCapture VideoCapture ScreenCapture; do
+        DEBLOAT[$opt]=$value
+      done
       ;;
     UISuggestions)
-      for opt in Spellcheck HomeButton ImportPasswords ImportSearchEngine; do eval "DEBLOAT_${opt}=$value"; done
+      for opt in Spellcheck HomeButton ImportSearchEngine; do
+        DEBLOAT[$opt]=$value
+      done
       ;;
   esac
 }
 
 # Default: all debloat options enabled
 for group in "${DEBLOAT_GROUPS[@]}"; do
-  set_debloat_group $group 1
+  set_debloat_group "$group" 1
 done
 for opt in SearchSuggestions WebStore BackgroundMode; do
-  eval "DEBLOAT_${opt}=1"
+  DEBLOAT[$opt]=1
 done
 
-# Friendlier, more relevant prompt for debloat groups
+# Prompt for debloat groups
 prompt_debloat_groups() {
   echo
-  echo -e "${CYAN}Brave Purifier: Choose which features to debloat for maximum privacy.${NC}"
+  echo "Brave Purifier: Choose which features to debloat"
   read -p "Would you like to apply ALL recommended debloat options? [Y/n]: " skip_all
   skip_all=${skip_all:-Y}
   if [[ $skip_all =~ ^[Yy]$ ]]; then
     info "Applying all recommended debloat options."
     return
   fi
-  echo -e "${YELLOW}You will be prompted for each group. Enter 'y' to debloat, 'n' to keep as is.${NC}"
+  echo "You will be prompted for each group. Enter 'y' to debloat, 'n' to keep as is."
   for group in "${DEBLOAT_GROUPS[@]}"; do
     case $group in
       BraveFeaturesServices)
-        label="Brave Features & Services (Rewards, Wallet, VPN, News, Talk, Sync, pings, analytics, crypto, web3, etc.)"
+        label="Brave Features & Services"
         desc="Disables all Brave-specific services, crypto, rewards, wallet, and telemetry."
         ;;
       PrivacyTracking)
-        label="Privacy & Tracking (Telemetry, Safe Browsing, Metrics, Log Upload, Heartbeat)"
+        label="Privacy & Tracking"
         desc="Disables all tracking, telemetry, and privacy-invasive features."
         ;;
       AutofillPasswords)
-        label="Autofill & Passwords (Autofill, Password Manager)"
-        desc="Disables autofill and password manager features."
+        label="Autofill & Passwords"
+        desc="Disables all autofill (addresses, credit cards, forms) and password manager features."
         ;;
       Permissions)
-        label="Permissions (Camera, Microphone, Location, Notifications, Sensors, Popups, WebUSB, WebBluetooth, Serial, HID, FileSystem, etc.)"
+        label="Permissions"
         desc="Blocks access to sensitive device features and permissions."
         ;;
       UISuggestions)
-        label="Other UI & Suggestions (Spellcheck, Home Button, Import Passwords, Import Search Engine)"
-        desc="Disables UI suggestions and import features."
+        label="Other UI & Suggestions"
+        desc="Disables UI suggestions and import search engine feature."
         ;;
     esac
-    echo -e "\n${BLUE}$label${NC}"
-    echo -e "  ${desc}"
+    echo
+    echo "$label"
+    echo "  $desc"
     read -p "Debloat this group? [Y/n]: " ans
     ans=${ans:-Y}
     if [[ $ans =~ ^[Yy]$ ]]; then
-      set_debloat_group $group 1
+      set_debloat_group "$group" 1
+      echo "Debloat applied for this group."
     else
-      set_debloat_group $group 0
+      set_debloat_group "$group" 0
+      echo "Debloat skipped for this group."
     fi
   done
-  # Prompt for the remaining special options
+  echo
+  echo "Home Screen Debloat"
+  echo "  Removes cards, date & time, top sites, news feed, and widgets from the new tab page."
+  read -p "Debloat the home screen? [Y/n]: " ans
+  ans=${ans:-Y}
+  if [[ $ans =~ ^[Yy]$ ]]; then
+    DEBLOAT[HomeScreen]=1
+    echo "Home screen will be debloated."
+  else
+    DEBLOAT[HomeScreen]=0
+    echo "Home screen will remain unchanged."
+  fi
   for opt in SearchSuggestions WebStore BackgroundMode; do
     case $opt in
-      SearchSuggestions) label="Search Suggestions (address bar autocomplete, etc.)"; desc="Disables search suggestions in the address bar.";;
-      WebStore) label="Web Store (extension/add-on store visibility)"; desc="Hides the web store icon and blocks extension installs.";;
-      BackgroundMode) label="Background Mode (Brave running in background)"; desc="Prevents Brave from running in the background.";;
+      SearchSuggestions) label="Search Suggestions"; desc="Disables search suggestions in the address bar.";;
+      WebStore) label="Web Store"; desc="Hides the web store icon and blocks extension installs.";;
+      BackgroundMode) label="Background Mode"; desc="Prevents Brave from running in the background.";;
     esac
-    echo -e "\n${BLUE}$label${NC}"
-    echo -e "  ${desc}"
+    echo
+    echo "$label"
+    echo "  $desc"
     read -p "Debloat this option? [Y/n]: " ans
     ans=${ans:-Y}
     if [[ $ans =~ ^[Yy]$ ]]; then
-      eval "DEBLOAT_${opt}=1"
+      DEBLOAT[$opt]=1
+      echo "Debloat applied for this option."
     else
-      eval "DEBLOAT_${opt}=0"
+      DEBLOAT[$opt]=0
+      echo "Debloat skipped for this option."
     fi
   done
 }
 
-# Reset to Brave defaults (preserve bookmarks, passwords, cookies, credentials, autofill, sync)
+# Reset to Brave defaults
 reset_brave_defaults() {
   echo
   warn "This will reset all Brave settings to defaults for all users and system policies."
@@ -367,348 +400,380 @@ reset_brave_defaults() {
   read -p "Are you sure you want to reset all settings to Brave defaults? [y/N]: " reset_ans
   reset_ans=${reset_ans:-N}
   if [[ $reset_ans =~ ^[Yy]$ ]]; then
-    # Remove system policy
     rm -f /etc/brave/policies/managed/privacy-policy.json 2>/dev/null
-    # Remove user Preferences (but not Bookmarks, Login Data, Cookies, etc.)
-    users=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// { print $1":"$6 }')
-    for entry in $users; do
-      username="${entry%%:*}"
-      user_home="${entry#*:}"
+    while IFS=: read -r username user_home; do
+      [[ -d "$user_home" ]] || continue
       brave_dir="$user_home/.config/BraveSoftware/Brave-Browser/Default"
       if [[ -f "$brave_dir/Preferences" ]]; then
         mv "$brave_dir/Preferences" "$brave_dir/Preferences.bak.$(date +%s)" 2>/dev/null
       fi
-    done
-    info "Brave settings reset to defaults. Bookmarks, passwords, cookies, credentials, autofill, and sync are preserved."
+      chown -R "$username:$(id -gn "$username")" "$user_home/.config/BraveSoftware" 2>/dev/null || true
+    done < <(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// { print $1":"$6 }')
+    info "Brave settings reset to defaults. Bookmarks, passwords, cookies, credentials, autofill, and sync preserved."
   else
     info "Skipping reset to Brave defaults."
   fi
 }
 
-# At the end, prompt for search engine
-prompt_search_engine() {
+# Prompt for default browser
+SET_DEFAULT_BROWSER=0
+prompt_default_browser() {
   echo
-  read -p "Do you want to set Google as the default search engine? (Otherwise, it will remain unchanged) [y/N]: " ans
+  read -p "Do you want to set Brave as the default browser for your user? [y/N]: " ans
   ans=${ans:-N}
   if [[ $ans =~ ^[Yy]$ ]]; then
-    SET_GOOGLE_SEARCH=1
-  else
-    SET_GOOGLE_SEARCH=0
+    SET_DEFAULT_BROWSER=1
   fi
 }
 
-# Modular system policy generator
+# Prompt for search engine
+SET_GOOGLE_SEARCH=0
+prompt_search_engine() {
+  echo
+  read -p "Do you want to set Google as the default search engine? (Otherwise, DuckDuckGo) [y/N]: " ans
+  ans=${ans:-N}
+  if [[ $ans =~ ^[Yy]$ ]]; then
+    SET_GOOGLE_SEARCH=1
+  fi
+}
+
+# Write system policy
 write_system_policy() {
   mkdir -p /etc/brave/policies/managed/
-  cat > /etc/brave/policies/managed/privacy-policy.json <<EOF
-{
-$( [[ $DEBLOAT_AutoplayAllowed -eq 1 ]] && echo '    "AutoplayAllowed": false,' )
-$( [[ $DEBLOAT_DefaultNotificationsSetting -eq 1 ]] && echo '    "DefaultNotificationsSetting": 2,' )
-$( [[ $DEBLOAT_DefaultGeolocationSetting -eq 1 ]] && echo '    "DefaultGeolocationSetting": 2,' )
-$( [[ $DEBLOAT_DefaultCamerasSetting -eq 1 ]] && echo '    "DefaultCamerasSetting": 2,' )
-$( [[ $DEBLOAT_DefaultMicrophonesSetting -eq 1 ]] && echo '    "DefaultMicrophonesSetting": 2,' )
-$( [[ $DEBLOAT_DefaultSensorsSetting -eq 1 ]] && echo '    "DefaultSensorsSetting": 2,' )
-    "DefaultSearchProviderEnabled": true,
-    "DefaultSearchProviderName": "DuckDuckGo",
-    "DefaultSearchProviderSearchURL": "https://duckduckgo.com/?q={searchTerms}&t=brave",
-    "DefaultSearchProviderSuggestURL": "",
-    "HomepageLocation": "about:blank",
-    "NewTabPageLocation": "about:blank",
-    "RestoreOnStartup": 1,
-$( [[ $DEBLOAT_SafeBrowsing -eq 1 ]] && echo '    "SafeBrowsingEnabled": false,' )
-$( [[ $DEBLOAT_SafeBrowsing -eq 1 ]] && echo '    "SafeBrowsingExtendedReportingEnabled": false,' )
-$( [[ $DEBLOAT_SearchSuggestions -eq 1 ]] && echo '    "SearchSuggestEnabled": false,' )
-$( [[ $DEBLOAT_Spellcheck -eq 1 ]] && echo '    "SpellcheckEnabled": false,' )
-$( [[ $DEBLOAT_Sync -eq 1 ]] && echo '    "SyncDisabled": true,' )
-    "TorDisabled": false,
-    "WebRTCIPHandlingPolicy": "disable_non_proxied_udp",
-$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "MetricsReportingEnabled": false,' )
-$( [[ $DEBLOAT_Autofill -eq 1 ]] && echo '    "AutofillAddressEnabled": false,' )
-$( [[ $DEBLOAT_Autofill -eq 1 ]] && echo '    "AutofillCreditCardEnabled": false,' )
-$( [[ $DEBLOAT_PasswordManager -eq 1 ]] && echo '    "PasswordManagerEnabled": false,' )
-$( [[ $DEBLOAT_Translate -eq 1 ]] && echo '    "TranslateEnabled": false,' )
-    "NetworkPredictionOptions": 2,
-$( [[ $DEBLOAT_BackgroundMode -eq 1 ]] && echo '    "BackgroundModeEnabled": false,' )
-$( [[ $DEBLOAT_WebStore -eq 1 ]] && echo '    "HideWebStoreIcon": true,' )
-$( [[ $DEBLOAT_BookmarksBar -eq 1 ]] && echo '    "BookmarkBarEnabled": false,' )
-$( [[ $DEBLOAT_HomeButton -eq 1 ]] && echo '    "ShowHomeButton": false,' )
-    "BrowserSignin": 0,
-$( [[ $DEBLOAT_ImportBookmarks -eq 1 ]] && echo '    "ImportBookmarks": false,' )
-$( [[ $DEBLOAT_ImportHistory -eq 1 ]] && echo '    "ImportHistory": false,' )
-$( [[ $DEBLOAT_ImportPasswords -eq 1 ]] && echo '    "ImportSavedPasswords": false,' )
-$( [[ $DEBLOAT_ImportSearchEngine -eq 1 ]] && echo '    "ImportSearchEngine": false,' )
-$( [[ $DEBLOAT_Popups -eq 1 ]] && echo '    "DefaultPopupsSetting": 2,' )
-$( [[ $DEBLOAT_WebBluetooth -eq 1 ]] && echo '    "DefaultWebBluetoothGuardSetting": 2,' )
-$( [[ $DEBLOAT_WebUSB -eq 1 ]] && echo '    "DefaultWebUsbGuardSetting": 2,' )
-$( [[ $DEBLOAT_FileSystemRead -eq 1 ]] && echo '    "DefaultFileSystemReadGuardSetting": 2,' )
-$( [[ $DEBLOAT_FileSystemWrite -eq 1 ]] && echo '    "DefaultFileSystemWriteGuardSetting": 2,' )
-$( [[ $DEBLOAT_Serial -eq 1 ]] && echo '    "DefaultSerialGuardSetting": 2,' )
-$( [[ $DEBLOAT_HID -eq 1 ]] && echo '    "DefaultHidGuardSetting": 2,' )
-$( [[ $DEBLOAT_Rewards -eq 1 ]] && echo '    "BraveRewardsDisabled": true,' )
-$( [[ $DEBLOAT_Wallet -eq 1 ]] && echo '    "BraveWalletDisabled": true,' )
-$( [[ $DEBLOAT_VPN -eq 1 ]] && echo '    "BraveVPNDisabled": true,' )
-$( [[ $DEBLOAT_News -eq 1 ]] && echo '    "BraveNewsDisabled": true,' )
-$( [[ $DEBLOAT_Talk -eq 1 ]] && echo '    "BraveTalkDisabled": true,' )
-    "BraveSearchDisabled": false,
-    "BraveShieldsEnabled": true,
-    "BraveShieldsEnabledForUrls": ["*"],
-    "BraveAdBlockEnabled": true,
-    "BraveFingerprintingBlockEnabled": true,
-    "BraveHTTPSUpgradeEnabled": true,
-    "BraveCookieBlockEnabled": true,
-    "DefaultCookiesSetting": 4,
-    "DefaultJavaScriptSetting": 1,
-    "DefaultImagesSetting": 1,
-    "DefaultPluginsSetting": 2,
-    "DeveloperToolsAvailability": 2,
-    "ExtensionInstallBlocklist": ["*"],
-    "ExtensionInstallAllowlist": [],
-$( [[ $DEBLOAT_CloudPrint -eq 1 ]] && echo '    "CloudPrintSubmitEnabled": false,' )
-    "DefaultPrinterSelection": "",
-$( [[ $DEBLOAT_Printing -eq 1 ]] && echo '    "PrintingEnabled": false,' )
-$( [[ $DEBLOAT_AudioCapture -eq 1 ]] && echo '    "AudioCaptureAllowed": false,' )
-$( [[ $DEBLOAT_VideoCapture -eq 1 ]] && echo '    "VideoCaptureAllowed": false,' )
-$( [[ $DEBLOAT_ScreenCapture -eq 1 ]] && echo '    "ScreenCaptureAllowed": false,' )
-$( [[ $DEBLOAT_MediaRouter -eq 1 ]] && echo '    "EnableMediaRouter": false,' )
-$( [[ $DEBLOAT_CastIcon -eq 1 ]] && echo '    "ShowCastIconInToolbar": false,' )
-    "CloudManagementEnrollmentToken": "",
-$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportVersionData": false,' )
-$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportPolicyData": false,' )
-$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportMachineIDData": false,' )
-$( [[ $DEBLOAT_MetricsReporting -eq 1 ]] && echo '    "ReportUserIDData": false,' )
-$( [[ $DEBLOAT_Heartbeat -eq 1 ]] && echo '    "HeartbeatEnabled": false,' )
-$( [[ $DEBLOAT_LogUpload -eq 1 ]] && echo '    "LogUploadEnabled": false' )
-}
-EOF
+  local policy_lines=()
+  [[ ${DEBLOAT[AutoplayAllowed]} -eq 1 ]] && policy_lines+=('    "AutoplayAllowed": false')
+  [[ ${DEBLOAT[DefaultNotificationsSetting]} -eq 1 ]] && policy_lines+=('    "DefaultNotificationsSetting": 2')
+  [[ ${DEBLOAT[DefaultGeolocationSetting]} -eq 1 ]] && policy_lines+=('    "DefaultGeolocationSetting": 2')
+  [[ ${DEBLOAT[DefaultCamerasSetting]} -eq 1 ]] && policy_lines+=('    "DefaultCamerasSetting": 2')
+  [[ ${DEBLOAT[DefaultMicrophonesSetting]} -eq 1 ]] && policy_lines+=('    "DefaultMicrophonesSetting": 2')
+  [[ ${DEBLOAT[DefaultSensorsSetting]} -eq 1 ]] && policy_lines+=('    "DefaultSensorsSetting": 2')
+  policy_lines+=('    "DefaultSearchProviderEnabled": true')
+  if [[ $SET_GOOGLE_SEARCH -eq 1 ]]; then
+    policy_lines+=('    "DefaultSearchProviderName": "Google"')
+    policy_lines+=('    "DefaultSearchProviderSearchURL": "https://www.google.com/search?q={searchTerms}"')
+    policy_lines+=('    "DefaultSearchProviderSuggestURL": "https://www.google.com/complete/search?output=chrome&q={searchTerms}"')
+  else
+    policy_lines+=('    "DefaultSearchProviderName": "DuckDuckGo"')
+    policy_lines+=('    "DefaultSearchProviderSearchURL": "https://duckduckgo.com/?q={searchTerms}&t=brave"')
+    policy_lines+=('    "DefaultSearchProviderSuggestURL": ""')
+  fi
+  policy_lines+=('    "HomepageLocation": "chrome://newtab/"')
+  policy_lines+=('    "NewTabPageLocation": "chrome://newtab/"')
+  policy_lines+=('    "RestoreOnStartup": 1')
+  [[ ${DEBLOAT[SafeBrowsing]} -eq 1 ]] && policy_lines+=('    "SafeBrowsingEnabled": false')
+  [[ ${DEBLOAT[SafeBrowsing]} -eq 1 ]] && policy_lines+=('    "SafeBrowsingExtendedReportingEnabled": false')
+  [[ ${DEBLOAT[SearchSuggestions]} -eq 1 ]] && policy_lines+=('    "SearchSuggestEnabled": false')
+  [[ ${DEBLOAT[Spellcheck]} -eq 1 ]] && policy_lines+=('    "SpellcheckEnabled": false')
+  [[ ${DEBLOAT[Sync]} -eq 1 ]] && policy_lines+=('    "SyncDisabled": true')
+  policy_lines+=('    "TorDisabled": false')
+  policy_lines+=('    "WebRTCIPHandlingPolicy": "disable_non_proxied_udp"')
+  [[ ${DEBLOAT[MetricsReporting]} -eq 1 ]] && policy_lines+=('    "MetricsReportingEnabled": false')
+  [[ ${DEBLOAT[Autofill]} -eq 1 ]] && policy_lines+=('    "AutofillAddressEnabled": false')
+  [[ ${DEBLOAT[Autofill]} -eq 1 ]] && policy_lines+=('    "AutofillCreditCardEnabled": false')
+  [[ ${DEBLOAT[PasswordManager]} -eq 1 ]] && policy_lines+=('    "PasswordManagerEnabled": false')
+  [[ ${DEBLOAT[Translate]} -eq 1 ]] && policy_lines+=('    "TranslateEnabled": false')
+  policy_lines+=('    "NetworkPredictionOptions": 2')
+  [[ ${DEBLOAT[BackgroundMode]} -eq 1 ]] && policy_lines+=('    "BackgroundModeEnabled": false')
+  [[ ${DEBLOAT[WebStore]} -eq 1 ]] && policy_lines+=('    "HideWebStoreIcon": true')
+  [[ ${DEBLOAT[BookmarksBar]} -eq 1 ]] && policy_lines+=('    "BookmarkBarEnabled": false')
+  [[ ${DEBLOAT[HomeButton]} -eq 1 ]] && policy_lines+=('    "ShowHomeButton": false')
+  policy_lines+=('    "BrowserSignin": 0')
+  [[ ${DEBLOAT[ImportHistory]} -eq 1 ]] && policy_lines+=('    "ImportHistory": false')
+  [[ ${DEBLOAT[Popups]} -eq 1 ]] && policy_lines+=('    "DefaultPopupsSetting": 2')
+  [[ ${DEBLOAT[WebBluetooth]} -eq 1 ]] && policy_lines+=('    "DefaultWebBluetoothGuardSetting": 2')
+  [[ ${DEBLOAT[WebUSB]} -eq 1 ]] && policy_lines+=('    "DefaultWebUsbGuardSetting": 2')
+  [[ ${DEBLOAT[FileSystemRead]} -eq 1 ]] && policy_lines+=('    "DefaultFileSystemReadGuardSetting": 2')
+  [[ ${DEBLOAT[FileSystemWrite]} -eq 1 ]] && policy_lines+=('    "DefaultFileSystemWriteGuardSetting": 2')
+  [[ ${DEBLOAT[Serial]} -eq 1 ]] && policy_lines+=('    "DefaultSerialGuardSetting": 2')
+  [[ ${DEBLOAT[HID]} -eq 1 ]] && policy_lines+=('    "DefaultHidGuardSetting": 2')
+  [[ ${DEBLOAT[Rewards]} -eq 1 ]] && policy_lines+=('    "BraveRewardsDisabled": true')
+  [[ ${DEBLOAT[Wallet]} -eq 1 ]] && policy_lines+=('    "BraveWalletDisabled": true')
+  [[ ${DEBLOAT[VPN]} -eq 1 ]] && policy_lines+=('    "BraveVPNDisabled": true')
+  [[ ${DEBLOAT[News]} -eq 1 ]] && policy_lines+=('    "BraveNewsDisabled": true')
+  [[ ${DEBLOAT[Talk]} -eq 1 ]] && policy_lines+=('    "BraveTalkDisabled": true')
+  policy_lines+=('    "BraveSearchDisabled": false')
+  policy_lines+=('    "BraveShieldsEnabled": true')
+  policy_lines+=('    "BraveShieldsEnabledForUrls": ["*"]')
+  policy_lines+=('    "BraveAdBlockEnabled": true')
+  policy_lines+=('    "BraveFingerprintingBlockEnabled": true')
+  policy_lines+=('    "BraveHTTPSUpgradeEnabled": true')
+  policy_lines+=('    "BraveCookieBlockEnabled": true')
+  policy_lines+=('    "DefaultCookiesSetting": 4')
+  policy_lines+=('    "DefaultJavaScriptSetting": 1')
+  policy_lines+=('    "DefaultImagesSetting": 1')
+  policy_lines+=('    "DefaultPluginsSetting": 2')
+  policy_lines+=('    "DeveloperToolsAvailability": 2')
+  policy_lines+=('    "ExtensionInstallBlocklist": ["*"]')
+  policy_lines+=('    "ExtensionInstallAllowlist": []')
+  [[ ${DEBLOAT[CloudPrint]} -eq 1 ]] && policy_lines+=('    "CloudPrintSubmitEnabled": false')
+  policy_lines+=('    "DefaultPrinterSelection": ""')
+  [[ ${DEBLOAT[Printing]} -eq 1 ]] && policy_lines+=('    "PrintingEnabled": false')
+  [[ ${DEBLOAT[AudioCapture]} -eq 1 ]] && policy_lines+=('    "AudioCaptureAllowed": false')
+  [[ ${DEBLOAT[VideoCapture]} -eq 1 ]] && policy_lines+=('    "VideoCaptureAllowed": false')
+  [[ ${DEBLOAT[ScreenCapture]} -eq 1 ]] && policy_lines+=('    "ScreenCaptureAllowed": false')
+  [[ ${DEBLOAT[MediaRouter]} -eq 1 ]] && policy_lines+=('    "EnableMediaRouter": false')
+  [[ ${DEBLOAT[CastIcon]} -eq 1 ]] && policy_lines+=('    "ShowCastIconInToolbar": false')
+  policy_lines+=('    "CloudManagementEnrollmentToken": ""')
+  [[ ${DEBLOAT[MetricsReporting]} -eq 1 ]] && policy_lines+=('    "ReportVersionData": false')
+  [[ ${DEBLOAT[MetricsReporting]} -eq 1 ]] && policy_lines+=('    "ReportPolicyData": false')
+  [[ ${DEBLOAT[MetricsReporting]} -eq 1 ]] && policy_lines+=('    "ReportMachineIDData": false')
+  [[ ${DEBLOAT[MetricsReporting]} -eq 1 ]] && policy_lines+=('    "ReportUserIDData": false')
+  [[ ${DEBLOAT[Heartbeat]} -eq 1 ]] && policy_lines+=('    "HeartbeatEnabled": false')
+  [[ ${DEBLOAT[LogUpload]} -eq 1 ]] && policy_lines+=('    "LogUploadEnabled": false')
+
+  # Write policy file without trailing comma
+  {
+    echo "{"
+    for ((i=0; i<${#policy_lines[@]}; i++)); do
+      if [[ $i -eq $(( ${#policy_lines[@]} - 1 )) ]]; then
+        echo "${policy_lines[$i]}"
+      else
+        echo "${policy_lines[$i]},"
+      fi
+    done
+    echo "}"
+  } > /etc/brave/policies/managed/privacy-policy.json
+  chmod 644 /etc/brave/policies/managed/privacy-policy.json
 }
 
-# Modular user settings generator
+# Write user preferences
 write_user_preferences() {
   local brave_dir="$1"
-  cat > "$brave_dir/Preferences" <<EOF
-{
-   "brave": {
-      "new_tab_page": {
-         "hide_all_widgets": true,
-         "show_background_image": false,
-         "show_clock": false,
-         "show_stats": false,
-         "show_top_sites": false,
-         "show_rewards": $( [[ $DEBLOAT_Rewards -eq 1 ]] && echo 'false' || echo 'true' )
-      },
-      "rewards": { "enabled": $( [[ $DEBLOAT_Rewards -eq 1 ]] && echo 'false' || echo 'true' ) },
-      "wallet": { "enabled": $( [[ $DEBLOAT_Wallet -eq 1 ]] && echo 'false' || echo 'true' ) },
-      "vpn": { "enabled": $( [[ $DEBLOAT_VPN -eq 1 ]] && echo 'false' || echo 'true' ) },
-      "news": { "enabled": $( [[ $DEBLOAT_News -eq 1 ]] && echo 'false' || echo 'true' ) },
-      "talk": { "enabled": $( [[ $DEBLOAT_Talk -eq 1 ]] && echo 'false' || echo 'true' ) }
-   },
-   "profile": {
-      "default_content_setting_values": {
-         "geolocation": 2,
-         "media_stream_camera": 2,
-         "media_stream_mic": 2,
-         "notifications": 2,
-         "popups": $( [[ $DEBLOAT_Popups -eq 1 ]] && echo '2' || echo '1' ),
-         "cookies": 4,
-         "sensors": 2,
-         "usb_chooser_data": 2,
-         "serial_chooser_data": 2,
-         "bluetooth_chooser_data": 2,
-         "hid_chooser_data": 2
-      }
-   },
-   "search": { "suggest_enabled": $( [[ $DEBLOAT_SearchSuggestions -eq 1 ]] && echo 'false' || echo 'true' ) },
-   "translate": { "enabled": $( [[ $DEBLOAT_Translate -eq 1 ]] && echo 'false' || echo 'true' ) },
-   "autofill": {
-      "profile_enabled": $( [[ $DEBLOAT_Autofill -eq 1 ]] && echo 'false' || echo 'true' ),
-      "credit_card_enabled": $( [[ $DEBLOAT_Autofill -eq 1 ]] && echo 'false' || echo 'true' )
-   },
-   "password_manager": { "auto_signin": $( [[ $DEBLOAT_PasswordManager -eq 1 ]] && echo 'false' || echo 'true' ) },
-   "safebrowsing": { "enabled": $( [[ $DEBLOAT_SafeBrowsing -eq 1 ]] && echo 'false' || echo 'true' ) },
-   "net": { "network_prediction_options": 2 }
-}
-EOF
-}
-
-# Remove telemetry and tracking files
-purge_telemetry() {
-    info "Purging telemetry and tracking components..."
-    
-    # System-wide telemetry removal
-    local telemetry_paths=(
-        "/opt/brave.com/brave/brave_crashpad_handler"
-        "/opt/brave.com/brave/crash_reporter"
-        "/etc/brave/policies/managed/telemetry*"
-    )
-    
-    for path in "${telemetry_paths[@]}"; do
-        [[ -e "$path" ]] && rm -rf "$path" && info "✓ Removed: $path"
-    done
-    
-    # User-specific telemetry cleanup
-    find /home -name ".config/BraveSoftware/Brave-Browser/*/Crash Reports" -type d -exec rm -rf {} + 2>/dev/null || true
-    find /home -name ".config/BraveSoftware/Brave-Browser/*/Crashpad" -type d -exec rm -rf {} + 2>/dev/null || true
-    
-    info "✓ Telemetry components purged"
-}
-
-# Verify installation and settings
-verify_installation() {
-    log "Verifying Brave Browser installation and privacy settings..."
-    
-    if ! command -v brave-browser >/dev/null 2>&1; then
-        error "✗ Brave Browser installation failed"
-        return 1
-    fi
-    
-    local version
-    version=$(brave-browser --version 2>/dev/null | head -n1)
-    log "✓ Brave Browser installed: $version"
-    
-    # Verify policy file
-    if [[ -f "/etc/brave/policies/managed/privacy-policy.json" ]]; then
-        log "✓ Privacy policies applied successfully"
+  mkdir -p "$brave_dir"
+  {
+    echo "{"
+    echo '   "brave": {'
+    echo '      "new_tab_page": {'
+    [[ ${DEBLOAT[HomeScreen]} -eq 1 ]] && echo '         "hide_all_widgets": false,'
+    [[ ${DEBLOAT[HomeScreen]} -eq 1 ]] && echo '         "show_background_image": false,'
+    [[ ${DEBLOAT[HomeScreen]} -eq 1 ]] && echo '         "show_clock": false,'
+    [[ ${DEBLOAT[HomeScreen]} -eq 1 ]] && echo '         "show_stats": false,'
+    [[ ${DEBLOAT[HomeScreen]} -eq 1 ]] && echo '         "show_top_sites": false,'
+    [[ ${DEBLOAT[HomeScreen]} -eq 1 ]] && echo '         "show_news": false,'
+    echo '         "enabled": true'
+    echo '      },'
+    echo "      \"rewards\": { \"enabled\": ${DEBLOAT[Rewards]:-0} == 1 ? false : true },"
+    echo "      \"wallet\": { \"enabled\": ${DEBLOAT[Wallet]:-0} == 1 ? false : true },"
+    echo "      \"vpn\": { \"enabled\": ${DEBLOAT[VPN]:-0} == 1 ? false : true },"
+    echo "      \"news\": { \"enabled\": ${DEBLOAT[News]:-0} == 1 ? false : true },"
+    echo "      \"talk\": { \"enabled\": ${DEBLOAT[Talk]:-0} == 1 ? false : true },"
+    echo '      "onboarding": {'
+    echo '         "enabled": false,'
+    echo '         "finished": true'
+    echo '      },'
+    echo '      "welcome": {'
+    echo '         "page_on_startup": false,'
+    echo '         "seen": true'
+    echo '      }'
+    echo '   },'
+    echo '   "profile": {'
+    echo '      "default_content_setting_values": {'
+    echo '         "geolocation": 2,'
+    echo '         "media_stream_camera": 2,'
+    echo '         "media_stream_mic": 2,'
+    echo '         "notifications": 2,'
+    echo "         \"popups\": ${DEBLOAT[Popups]:-0} == 1 ? 2 : 1,"
+    echo '         "cookies": 4,'
+    echo '         "sensors": 2,'
+    echo '         "usb_chooser_data": 2,'
+    echo '         "serial_chooser_data": 2,'
+    echo '         "bluetooth_chooser_data": 2,'
+    echo '         "hid_chooser_data": 2'
+    echo '      },'
+    echo '      "first_run": false'
+    echo '   },'
+    echo '   "search": {'
+    if [[ $SET_GOOGLE_SEARCH -eq 1 ]]; then
+      echo '      "default_search_provider": {'
+      echo '         "enabled": true,'
+      echo '         "name": "Google",'
+      echo '         "search_url": "https://www.google.com/search?q={searchTerms}",'
+      echo '         "suggest_url": "https://www.google.com/complete/search?output=chrome&q={searchTerms}"'
+      echo '      }'
     else
-        warn "⚠ Privacy policies may not be applied correctly"
+      echo "      \"suggest_enabled\": ${DEBLOAT[SearchSuggestions]:-0} == 1 ? false : true"
     fi
-    
-    return 0
+    echo '   },'
+    echo "   \"translate\": { \"enabled\": ${DEBLOAT[Translate]:-0} == 1 ? false : true },"
+    echo '   "autofill": {'
+    echo "      \"profile_enabled\": ${DEBLOAT[Autofill]:-0} == 1 ? false : true,"
+    echo "      \"credit_card_enabled\": ${DEBLOAT[Autofill]:-0} == 1 ? false : true"
+    echo '   },'
+    echo "   \"password_manager\": { \"auto_signin\": ${DEBLOAT[PasswordManager]:-0} == 1 ? false : true },"
+    echo "   \"safebrowsing\": { \"enabled\": ${DEBLOAT[SafeBrowsing]:-0} == 1 ? false : true },"
+    echo '   "net": { "network_prediction_options": 2 }'
+    echo "}"
+  } > "$brave_dir/Preferences"
+  chmod 600 "$brave_dir/Preferences"
+}
+
+# Purge telemetry
+purge_telemetry() {
+  info "Purging telemetry and tracking components..."
+  local telemetry_paths=(
+    "/opt/brave.com/brave/brave_crashpad_handler"
+    "/opt/brave.com/brave/crash_reporter"
+    "/etc/brave/policies/managed/telemetry*"
+    "/opt/brave.com/brave/usage*"
+  )
+  for path in "${telemetry_paths[@]}"; do
+    [[ -e "$path" ]] && rm -rf "$path" 2>/dev/null && info "✓ Removed: $path"
+  done
+  find /home -type d \( -name "Crash Reports" -o -name "Crashpad" \) \
+    -path "*/.config/BraveSoftware/Brave-Browser/*" -exec rm -rf {} + 2>/dev/null || true
+  info "✓ Telemetry components purged"
+}
+
+# Verify installation
+verify_installation() {
+  log "Verifying Brave Browser installation and privacy settings..."
+  if ! command -v brave-browser >/dev/null 2>&1; then
+    error "✗ Brave Browser installation failed"
+    return 1
+  fi
+  local version
+  version=$(brave-browser --version 2>/dev/null | head -n1 || echo "Unknown")
+  log "✓ Brave Browser installed: $version"
+  if [[ -f "/etc/brave/policies/managed/privacy-policy.json" ]]; then
+    log "✓ Privacy policies applied successfully"
+  else
+    warn "⚠ Privacy policies may not be applied correctly"
+  fi
+  return 0
 }
 
 # Display completion summary
 show_completion() {
+  echo
+  echo "BRAVE PURIFIER COMPLETE"
+  echo
+  info "Brave Browser has been successfully purified for maximum privacy!"
+  echo
+  echo "Privacy Enhancements Applied:"
+  echo "  - All telemetry and tracking disabled"
+  echo "  - Ads, trackers, and fingerprinting blocked"
+  echo "  - $( [[ $SET_GOOGLE_SEARCH -eq 1 ]] && echo "Google" || echo "DuckDuckGo" ) set as default search engine"
+  echo "  - WebRTC IP leak protection enabled"
+  echo "  - Unnecessary features disabled (Rewards, Wallet, VPN, etc.)"
+  echo "  - Enhanced content blocking and privacy settings"
+  echo "  - Hardened security policies applied system-wide"
+  echo
+  echo "Note: Restart Brave Browser to ensure all settings take effect."
+  if [[ $SET_DEFAULT_BROWSER -eq 1 ]]; then
+    echo "Brave is set as your default browser."
+  fi
+  echo "Your privacy is now maximally protected!"
+  if [[ $UNRELATED_APT_ERROR -eq 1 ]]; then
     echo
-    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║                  BRAVE PURIFIER COMPLETE                     ║${NC}"
-    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo
-    info "Brave Browser has been successfully purified for maximum privacy!"
-    echo
-    echo -e "${BLUE}Privacy Enhancements Applied:${NC}"
-    echo "  🔒 All telemetry and tracking disabled"
-    echo "  🚫 Ads, trackers, and fingerprinting blocked"
-    echo "  🔍 DuckDuckGo set as default search engine"
-    echo "  🌐 WebRTC IP leak protection enabled"
-    echo "  📵 All unnecessary features disabled (Rewards, Wallet, VPN, etc.)"
-    echo "  🛡️ Enhanced content blocking and privacy settings"
-    echo "  🔐 Hardened security policies applied system-wide"
-    echo
-    echo -e "${YELLOW}Note:${NC} Restart Brave Browser to ensure all settings take effect."
-    echo -e "${GREEN}Your privacy is now maximally protected!${NC}"
-    if [[ $UNRELATED_APT_ERROR -eq 1 ]]; then
-        echo
-        warn "Some unrelated apt errors were detected (e.g., Cloudflare WARP repo). See Troubleshooting in the README to fix these."
-    fi
-    echo
+    warn "Some unrelated apt errors were detected. See Troubleshooting in the README."
+  fi
+  echo
 }
 
-# Show help information
+# Show help
 show_help() {
-    echo -e "${BLUE}$SCRIPT_NAME v$SCRIPT_VERSION${NC}"
-    echo "Ultra-lightweight privacy-focused Brave Browser installer and debloater"
-    echo
-    echo -e "${CYAN}Usage:${NC}"
-    echo "  sudo $0 [OPTIONS]"
-    echo
-    echo -e "${CYAN}Options:${NC}"
-    echo "  -h, --help     Show this help message"
-    echo "  -v, --version  Show version information"
-    echo
-    echo -e "${CYAN}Examples:${NC}"
-    echo "  sudo $0                    # Install/update and purify Brave"
-    echo "  sudo $0 --help             # Show help"
-    echo
-    echo -e "${CYAN}Repository:${NC} https://github.com/nightcodex7/brave-purifier"
+  echo "$SCRIPT_NAME v$SCRIPT_VERSION"
+  echo "Ultra-lightweight privacy-focused Brave Browser installer and debloater"
+  echo
+  echo "Usage:"
+  echo "  sudo $0 [OPTIONS]"
+  echo
+  echo "Options:"
+  echo "  -h, --help     Show this help message"
+  echo "  -v, --version  Show version information"
+  echo
+  echo "Examples:"
+  echo "  sudo $0                    # Install/update and purify Brave"
+  echo "  sudo $0 --help             # Show help"
+  echo
+  echo "Repository: https://github.com/nightcodex7/BravePurifier"
 }
 
-# Show version information
+# Show version
 show_version() {
-    echo -e "${BLUE}$SCRIPT_NAME${NC} version ${GREEN}$SCRIPT_VERSION${NC}"
-    echo "Author: nightcodex7"
-    echo "Repository: https://github.com/nightcodex7/brave-purifier"
-    echo "License: MIT"
+  echo "$SCRIPT_NAME version $SCRIPT_VERSION"
+  echo "Author: nightcodex7"
+  echo "Repository: https://github.com/nightcodex7/BravePurifier"
+  echo "License: MIT"
 }
 
-# Parse command line arguments
+# Parse arguments
 parse_arguments() {
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            -h|--help)
-                show_help
-                exit 0
-                ;;
-            -v|--version)
-                show_version
-                exit 0
-                ;;
-            *)
-                error "Unknown option: $1"
-                echo "Use --help for usage information"
-                exit 1
-                ;;
-        esac
-        shift
-    done
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        show_help
+        exit 0
+        ;;
+      -v|--version)
+        show_version
+        exit 0
+        ;;
+      *)
+        error "Unknown option: $1"
+        echo "Use --help for usage information"
+        exit 1
+        ;;
+    esac
+    shift
+  done
 }
 
-# Main execution with enhanced error handling
+# Set Brave as default browser
+set_brave_default_browser() {
+  if [[ $SET_DEFAULT_BROWSER -eq 1 ]]; then
+    if command -v xdg-settings >/dev/null 2>&1; then
+      xdg-settings set default-web-browser brave-browser.desktop 2>/dev/null && \
+        info "Brave set as default browser using xdg-settings."
+    elif command -v update-alternatives >/dev/null 2>&1; then
+      update-alternatives --set x-www-browser /usr/bin/brave-browser 2>/dev/null && \
+        info "Brave set as default browser using update-alternatives."
+    else
+      warn "Could not set Brave as default browser automatically. Please set it manually."
+    fi
+  fi
+}
+
+# Main execution
 main() {
-    # Parse command line arguments
-    parse_arguments "$@"
-    
-    echo -e "${BLUE}"
-    cat << 'EOF'
-╔══════════════════════════════════════════════════════════════╗
-║                    BRAVE PURIFIER v1.0                      ║
-║          Ultra-Lightweight Privacy-Focused Installer        ║
-║                    by nightcodex7                           ║
-╚══════════════════════════════════════════════════════════════╝
-EOF
-    echo -e "${NC}"
-    
-    # Prerequisites
-    check_root
-    detect_package_manager
-    install_dependencies
-    
-    # Install or update Brave
-    if is_brave_installed; then
-        log "Brave Browser detected. Skipping installation. Proceeding to update and debloat."
-        update_brave
-    else
-        log "Brave Browser not detected. Installing..."
-        install_brave
-    fi
-    
-    # Apply privacy enhancements
-    prompt_debloat_groups
-    prompt_search_engine
-    write_system_policy
-    # Apply user settings for all users
-    local users
-    users=$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// { print $1":"$6 }')
-    while IFS=: read -r username user_home; do
-        [[ -d "$user_home" ]] || continue
-        local brave_dir="$user_home/.config/BraveSoftware/Brave-Browser/Default"
-        mkdir -p "$brave_dir"
-        write_user_preferences "$brave_dir"
-        chown -R "$username:$(id -gn "$username")" "$user_home/.config/BraveSoftware" 2>/dev/null || true
-        info "✓ Privacy settings applied for user: $username"
-    done <<< "$users"
-    purge_telemetry
-    
-    # Verify and complete
-    if verify_installation; then
-        show_completion
-        exit 0
-    else
-        error "Installation verification failed. If you encounter issues, please open an issue or ask in the discussion area of the project."
-        exit 1
-    fi
+  parse_arguments "$@"
+  echo
+  echo "BRAVE PURIFIER v$SCRIPT_VERSION"
+  echo "Ultra-lightweight privacy-focused installer by nightcodex7"
+  echo
+  detect_package_manager
+  install_dependencies
+  if is_brave_installed; then
+    log "Brave Browser detected. Updating and debloating."
+    update_brave
+  else
+    log "Brave Browser not detected. Installing..."
+    install_brave
+  fi
+  prompt_debloat_groups
+  prompt_search_engine
+  prompt_default_browser
+  write_system_policy
+  while IFS=: read -r username user_home; do
+    [[ -d "$user_home" ]] || continue
+    local brave_dir="$user_home/.config/BraveSoftware/Brave-Browser/Default"
+    write_user_preferences "$brave_dir"
+    chown -R "$username:$(id -gn "$username")" "$user_home/.config/BraveSoftware" 2>/dev/null || \
+      warn "Failed to set ownership for $user_home/.config/BraveSoftware"
+    info "Privacy settings applied for user: $username"
+  done < <(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $6 ~ /^\/home\// { print $1":"$6 }')
+  set_brave_default_browser
+  purge_telemetry
+  if verify_installation; then
+    show_completion
+    exit 0
+  else
+    error "Installation verification failed. Check logs or report an issue."
+    exit 1
+  fi
 }
 
 # Signal handling
-trap 'error "Script interrupted"; exit 130' INT TERM
+trap 'error "Script interrupted"; exit 130' INT TERM HUP QUIT
 
-# Execute main function with all arguments
 main "$@"
